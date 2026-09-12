@@ -2,10 +2,11 @@
 
 namespace App\Filament\Resources\PrintJobs\Tables;
 
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
+use App\Enums\PrintJobStatus;
+use App\Enums\PrintType;
+use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
 class PrintJobsTable
@@ -16,22 +17,22 @@ class PrintJobsTable
         return $table
             ->columns([
                 TextColumn::make('printer.name')->label('Máy in')->sortable(),
-                TextColumn::make('order_id')->label('Mã đơn')->sortable(),
+                TextColumn::make('order.code')->label('Mã đơn')->placeholder('Không gắn đơn')->searchable()->sortable(),
                 TextColumn::make('print_type')->label('Loại')->badge(),
                 TextColumn::make('status')->label('Trạng thái')->badge(),
                 TextColumn::make('attempts')->label('Số lần thử')->sortable(),
+                TextColumn::make('error_message')->label('Lỗi gần nhất')->limit(45)->placeholder('Không có'),
+                TextColumn::make('created_at')->label('Tạo lúc')->dateTime('d/m/Y H:i')->sortable(),
                 TextColumn::make('printed_at')->label('Đã in lúc')->dateTime('d/m/Y H:i')->placeholder('Chưa in'),
             ])
             ->filters([
-                //
+                SelectFilter::make('status')->label('Trạng thái')->options(PrintJobStatus::class),
+                SelectFilter::make('print_type')->label('Loại nội dung')->options(PrintType::class),
+                SelectFilter::make('printer')->label('Máy in')->relationship('printer', 'name'),
             ])
             ->recordActions([
-                EditAction::make(),
+                ViewAction::make(),
             ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
-            ]);
+            ->defaultSort('id', 'desc');
     }
 }

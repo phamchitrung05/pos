@@ -131,12 +131,19 @@ class DatabaseSeeder extends Seeder
         $staff->assignRole($staffRole);
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        // Tạo 10 khu vực và phân bổ luân phiên cho hai cửa hàng để cả hai
+        // Tạo 10 khu vực mẫu và phân bổ luân phiên cho hai cửa hàng để cả hai
         // chi nhánh đều có dữ liệu phục vụ việc kiểm tra bộ lọc theo store.
         $zones = collect(range(1, 10))->map(function (int $index) use ($stores, $faker): TableZone {
+            $name = $faker->randomElement(['Trong nhà', 'Ngoài trời', 'Tầng 1', 'Tầng 2'])." {$index}";
+
+            // Dành riêng tên này cho khu mở rộng của POS Trần Phú bên dưới.
+            if ($name === 'Ngoài trời 2') {
+                $name = 'Ngoài hiên 2';
+            }
+
             return TableZone::create([
                 'store_id' => $stores[($index - 1) % 2]->id,
-                'name' => $faker->randomElement(['Trong nhà', 'Ngoài trời', 'Tầng 1', 'Tầng 2'])." {$index}",
+                'name' => $name,
                 'is_active' => true,
             ]);
         });
@@ -150,6 +157,22 @@ class DatabaseSeeder extends Seeder
                 'store_id' => $zone->store_id,
                 'zone_id' => $zone->id,
                 'name' => sprintf('Bàn %02d', $index),
+            ]);
+        });
+
+        // POS Trần Phú có thêm một khu ngoài trời lớn để kiểm tra layout nhiều
+        // bàn và thao tác tìm kiếm/lọc trên màn hình POS.
+        $outdoorZone = TableZone::create([
+            'store_id' => $stores[1]->id,
+            'name' => 'Ngoài trời 2',
+            'is_active' => true,
+        ]);
+
+        collect(range(1, 18))->each(function (int $index) use ($stores, $outdoorZone): void {
+            DiningTable::create([
+                'store_id' => $stores[1]->id,
+                'zone_id' => $outdoorZone->id,
+                'name' => sprintf('Bàn NT2 %02d', $index),
             ]);
         });
 
@@ -196,8 +219,11 @@ class DatabaseSeeder extends Seeder
         // Mỗi phiên có một đơn hàng đã thanh toán. Tổng tiền ban đầu được
         // tính từ đúng một sản phẩm tương ứng, sau đó OrderItem lưu snapshot
         // đơn giá tại thời điểm gọi món.
-        $orders = collect(range(1, 10))->map(function (int $index) use ($sessions, $products, $faker): Order {
+        $orderNumbersByStore = [];
+        $orders = collect(range(1, 10))->map(function (int $index) use ($sessions, $products, $faker, &$orderNumbersByStore): Order {
             $product = $products[$index - 1];
+            $storeId = (int) $sessions[$index - 1]->store_id;
+            $orderNumbersByStore[$storeId] = ($orderNumbersByStore[$storeId] ?? 0) + 1;
             // Dùng công thức cố định để Order và OrderItem luôn có cùng số
             // lượng, nhờ đó tổng tiền mẫu luôn khớp với chi tiết đơn hàng.
             $quantity = (($index - 1) % 3) + 1;
@@ -206,7 +232,7 @@ class DatabaseSeeder extends Seeder
                 'store_id' => $sessions[$index - 1]->store_id,
                 'table_session_id' => $sessions[$index - 1]->id,
                 // Seeder tắt model events, nên mã mẫu phải được gán trực tiếp.
-                'code' => 'ORD-'.now()->format('mdy').'-'.str_pad((string) $index, 3, '0', STR_PAD_LEFT),
+                'code' => 'ORD-'.now()->format('mdy').'-'.str_pad((string) $orderNumbersByStore[$storeId], 3, '0', STR_PAD_LEFT),
                 'status' => OrderStatus::Paid,
                 'total' => $product->price * $quantity,
                 'notes' => $faker->optional()->sentence(),

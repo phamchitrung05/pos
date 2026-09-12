@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Printers\Schemas;
 
+use App\Enums\PrinterPaperWidth;
 use App\Enums\PrinterType;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -19,8 +20,10 @@ class PrinterForm
                 // chi nhánh do client gửi trong request tạo hoặc cập nhật.
                 TextInput::make('name')->label('Tên máy in')->required()->maxLength(255),
                 Select::make('printer_type')->label('Loại máy in')->options(PrinterType::class)->required()->default(PrinterType::Receipt->value),
-                TextInput::make('ip_address')->label('Địa chỉ IP')->ip(),
-                TextInput::make('port')->label('Cổng kết nối')->numeric()->integer()->minValue(1)->maxValue(65535),
+                // Agent chỉ claim máy có endpoint LAN hoàn chỉnh, vì vậy form không tạo cấu hình nửa vời.
+                TextInput::make('ip_address')->label('Địa chỉ IP')->ip()->required(),
+                TextInput::make('port')->label('Cổng kết nối')->numeric()->integer()->minValue(1)->maxValue(65535)->required(),
+                Select::make('paper_width_mm')->label('Khổ giấy')->options(PrinterPaperWidth::class)->required()->default(PrinterPaperWidth::Mm80->value),
                 Toggle::make('is_active')->label('Đang sử dụng')->default(true),
             ]);
     }

@@ -6,6 +6,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Enums\TableSessionStatus;
+use App\Events\PosStateChanged;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\TableSession;
@@ -31,6 +32,7 @@ final class CheckoutTable
         User $actor,
         PaymentMethod $paymentMethod = PaymentMethod::Cash,
         ?string $clientRequestId = null,
+        bool $allowUnprintedKitchenItems = false,
     ): Payment {
         $requestId = $clientRequestId ?? (string) Str::uuid();
 
@@ -41,7 +43,7 @@ final class CheckoutTable
         }
 
         try {
-            return DB::transaction(function () use ($order, $actor, $paymentMethod, $requestId): Payment {
+            $payment = DB::transaction(function () use ($order, $actor, $paymentMethod, $requestId, $allowUnprintedKitchenItems): Payment {
                 /** @var Order $lockedOrder */
                 $lockedOrder = Order::query()
                     ->lockForUpdate()
@@ -82,7 +84,7 @@ final class CheckoutTable
                     ->whereColumn('quantity', '>', 'kitchen_printed_quantity')
                     ->exists();
 
-                if ($hasUnprintedKitchenItems) {
+                if ($hasUnprintedKitchenItems && ! $allowUnprintedKitchenItems) {
                     throw ValidationException::withMessages([
                         'items' => 'Cần tạo phiếu bếp cho toàn bộ món mới trước khi thanh toán.',
                     ]);
@@ -139,7 +141,11 @@ final class CheckoutTable
                 ]);
             }
 
-            return $existingPayment->load(['order.tableSession', 'receivedBy']);
+            $payment = $existingPayment->load(['order.tableSession', 'receivedBy']);
         }
+
+        PosStateChanged::dispatch((int) $payment->store_id, (int) $payment->order->tableSession->table_id, 'payment.completed');
+
+        return $payment;
     }
 }

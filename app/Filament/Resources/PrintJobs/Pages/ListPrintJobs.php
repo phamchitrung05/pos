@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\PrintJobs\Pages;
 
 use App\Filament\Resources\PrintJobs\PrintJobResource;
-use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 
 class ListPrintJobs extends ListRecords
@@ -12,8 +11,7 @@ class ListPrintJobs extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        return [
-            CreateAction::make(),
-        ];
+        // PrintJob chỉ được sinh từ action nghiệp vụ, không cho tạo payload thủ công.
+        return [];
     }
 }

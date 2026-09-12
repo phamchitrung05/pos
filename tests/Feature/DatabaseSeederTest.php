@@ -31,8 +31,14 @@ class DatabaseSeederTest extends TestCase
 
         $this->assertSame(2, Store::query()->count());
         $this->assertSame(2, User::query()->count());
-        $this->assertSame(10, TableZone::query()->count());
-        $this->assertSame(10, DiningTable::query()->count());
+        $this->assertSame(11, TableZone::query()->count());
+        $this->assertSame(28, DiningTable::query()->count());
+
+        $outdoorZone = TableZone::query()
+            ->where('name', 'Ngoài trời 2')
+            ->where('store_id', Store::query()->where('name', 'POS Trần Phú')->value('id'))
+            ->firstOrFail();
+        $this->assertSame(18, DiningTable::query()->where('zone_id', $outdoorZone->id)->count());
         $this->assertSame(10, TableSession::query()->count());
         $this->assertSame(10, ProductGroup::query()->count());
         $this->assertSame(10, Product::query()->count());

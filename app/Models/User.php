@@ -14,15 +14,17 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
 /** Tài khoản đăng nhập, đồng thời là chủ thể nhận role, permission và quyền truy cập tenant. */
 class User extends Authenticatable implements FilamentUser, HasDefaultTenant, HasTenants
 {
     /** @use HasFactory<UserFactory> */
-    use AssignsCurrentStore, HasFactory, HasRoles, Notifiable;
+    use AssignsCurrentStore, HasApiTokens, HasFactory, HasRoles, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -40,6 +42,12 @@ class User extends Authenticatable implements FilamentUser, HasDefaultTenant, Ha
     public function store(): BelongsTo
     {
         return $this->belongsTo(Store::class);
+    }
+
+    /** Command đã được thực hiện dưới danh tính tài khoản này. */
+    public function posCommands(): HasMany
+    {
+        return $this->hasMany(PosCommand::class);
     }
 
     /**

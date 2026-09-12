@@ -2,3 +2,9 @@
 
 @source '../../../../app/Filament/**/*';
 @source '../../../../resources/views/filament/**/*';
+@source '../../../../resources/views/livewire/**/*';
+
+.scroll-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}

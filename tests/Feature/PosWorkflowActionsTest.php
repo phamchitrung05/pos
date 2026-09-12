@@ -3,9 +3,12 @@
 namespace Tests\Feature;
 
 use App\Actions\Pos\AddOrderItems;
+use App\Actions\Pos\CheckoutAndQueueReceipt;
 use App\Actions\Pos\CheckoutTable;
 use App\Actions\Pos\CreateKitchenPrintJob;
+use App\Actions\Pos\CreateReceiptPrintJob;
 use App\Actions\Pos\OpenTableSession;
+use App\Actions\Pos\RetryPrintJob;
 use App\Actions\Pos\UpdateOrderItem;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
@@ -21,6 +24,7 @@ use App\Filament\Resources\PrintJobs\PrintJobResource;
 use App\Filament\Resources\TableSessions\TableSessionResource;
 use App\Models\DiningTable;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\Printer;
 use App\Models\Product;
@@ -74,7 +78,7 @@ class PosWorkflowActionsTest extends TestCase
         $this->assertSame(1, Order::query()->where('table_session_id', $session->id)->count());
     }
 
-    /** Thêm món phải dùng giá Product tại server, gộp dòng trùng và tính lại tổng. */
+    /** Thêm món dùng giá Product mặc định, gộp dòng trùng và tính lại tổng. */
     public function test_add_order_items_uses_server_price_and_recalculates_total(): void
     {
         $actor = $this->owner();
@@ -85,8 +89,6 @@ class PosWorkflowActionsTest extends TestCase
             'product_id' => $product->id,
             'quantity' => 2,
             'notes' => 'Ít đá',
-            // Giá giả này không nằm trong rule validate và tuyệt đối không được action sử dụng.
-            'unit_price' => 1,
         ]]);
 
         $item = $order->items->firstOrFail();
@@ -107,6 +109,28 @@ class PosWorkflowActionsTest extends TestCase
         $this->assertSame(number_format((float) $product->price * 3, 2, '.', ''), $order->total);
     }
 
+    /** Giá nhân viên nhập phải áp dụng cho dòng gộp và được dùng khi tính tổng order. */
+    public function test_add_and_update_order_item_accept_an_authorized_custom_price(): void
+    {
+        $actor = $this->owner();
+        $order = $this->openOrder($actor);
+        $product = $this->productForOrder($order);
+
+        $order = app(AddOrderItems::class)->handle($order, $actor, [[
+            'product_id' => $product->id,
+            'quantity' => 2,
+            'unit_price' => 25_000,
+        ]]);
+        $item = $order->items->firstOrFail();
+
+        $this->assertSame('25000.00', $item->unit_price);
+        $this->assertSame('50000.00', $order->total);
+
+        $updated = app(UpdateOrderItem::class)->handle($item, $actor, 2, null, 30_000);
+        $this->assertSame('30000.00', $updated->unit_price);
+        $this->assertSame('60000.00', $updated->order->total);
+    }
+
     /** Phiếu bếp lần sau chỉ chứa số lượng tăng thêm và không thể tạo khi không có món mới. */
     public function test_kitchen_print_job_only_contains_unprinted_quantity(): void
     {
@@ -125,6 +149,9 @@ class PosWorkflowActionsTest extends TestCase
         $this->assertSame(PrintType::Kitchen, $firstJob->print_type);
         $this->assertSame(PrintJobStatus::Pending, $firstJob->status);
         $this->assertSame(2, $firstJob->payload['items'][0]['quantity']);
+        $this->assertSame(80, $firstJob->payload['document']['paper_width_mm']);
+        $this->assertSame(576, $firstJob->payload['document']['dots_per_line']);
+        $this->assertSame('raster', $firstJob->payload['document']['render_mode']);
         $this->assertSame(2, $order->items->first()->refresh()->kitchen_printed_quantity);
 
         // Tăng thêm một món trên dòng đã in; snapshot thứ hai chỉ được chứa phần chênh lệch là một.
@@ -142,7 +169,7 @@ class PosWorkflowActionsTest extends TestCase
         app(CreateKitchenPrintJob::class)->handle($order->refresh(), $printer, $actor);
     }
 
-    /** Dòng đã in có thể tăng số lượng nhưng không được giảm hoặc đổi ghi chú đã gửi cho bếp. */
+    /** Dòng đã in vẫn có thể giảm số lượng do khách sửa yêu cầu, nhưng khóa ghi chú chế biến. */
     public function test_update_order_item_protects_information_already_sent_to_kitchen(): void
     {
         $actor = $this->owner();
@@ -163,9 +190,55 @@ class PosWorkflowActionsTest extends TestCase
         $this->assertSame(3, $updatedItem->quantity);
         $this->assertSame(number_format((float) $product->price * 3, 2, '.', ''), $updatedItem->order->total);
 
+        $reducedItem = app(UpdateOrderItem::class)->handle($updatedItem, $actor, 1, 'Không đường');
+        $this->assertSame(1, $reducedItem->quantity);
+        $this->assertSame(number_format((float) $product->price, 2, '.', ''), $reducedItem->order->total);
+
         $this->expectException(ValidationException::class);
 
-        app(UpdateOrderItem::class)->handle($updatedItem, $actor, 1, 'Không đường');
+        app(UpdateOrderItem::class)->handle($reducedItem, $actor, 1, 'Có đường');
+    }
+
+    /** Món đã lưu server nhưng chưa chuyển bếp vẫn có thể sửa từ ba phần xuống hai phần. */
+    public function test_update_order_item_can_decrease_unprinted_quantity(): void
+    {
+        $actor = $this->owner();
+        $order = $this->openOrder($actor);
+        $product = $this->productForOrder($order);
+        $order = app(AddOrderItems::class)->handle($order, $actor, [[
+            'product_id' => $product->id,
+            'quantity' => 3,
+        ]]);
+
+        $updatedItem = app(UpdateOrderItem::class)->handle($order->items->firstOrFail(), $actor, 2);
+
+        $this->assertSame(2, $updatedItem->quantity);
+        $this->assertSame(''.((int) $product->price * 2).'.00', $updatedItem->order->total);
+    }
+
+    /** Dòng món đã gửi bếp về 0 phải biến mất khỏi order và tổng tiền phải được tính lại. */
+    public function test_update_order_item_can_remove_sent_item_at_zero(): void
+    {
+        $actor = $this->owner();
+        $order = $this->openOrder($actor);
+        $product = $this->productForOrder($order);
+        $order = app(AddOrderItems::class)->handle($order, $actor, [[
+            'product_id' => $product->id,
+            'quantity' => 1,
+            'notes' => 'Không đá',
+        ]]);
+        $item = $order->items->firstOrFail();
+
+        app(CreateKitchenPrintJob::class)->handle($order, $this->kitchenPrinterForOrder($order), $actor);
+
+        $removedItem = app(UpdateOrderItem::class)->handle($item->refresh(), $actor, 0, 'Không đá');
+
+        $this->assertFalse(OrderItem::query()->whereKey($item->getKey())->exists());
+        $this->assertSame(0, $order->items()->count());
+        $this->assertSame('0.00', $removedItem->order->total);
+        $this->assertSame(OrderStatus::Cancelled, $removedItem->order->status);
+        $this->assertSame(TableSessionStatus::Cancelled, $removedItem->order->tableSession->status);
+        $this->assertNotNull($removedItem->order->tableSession->end_time);
     }
 
     /** Checkout phải lấy tổng server, tạo đúng một payment rồi đóng order và phiên bàn. */
@@ -200,6 +273,120 @@ class PosWorkflowActionsTest extends TestCase
         $this->assertSame(TableSessionStatus::Closed, $session->status);
         $this->assertSame($actor->id, $session->closed_by);
         $this->assertNotNull($session->end_time);
+    }
+
+    /** Hóa đơn dùng snapshot payment, đúng profile giấy và chỉ tạo một job cho mỗi giao dịch. */
+    public function test_receipt_print_job_is_idempotent_and_contains_the_render_profile(): void
+    {
+        $actor = $this->owner();
+        $order = $this->openOrder($actor);
+        $product = $this->productForOrder($order);
+        $order = app(AddOrderItems::class)->handle($order, $actor, [[
+            'product_id' => $product->id,
+            'quantity' => 2,
+        ]]);
+        app(CreateKitchenPrintJob::class)->handle($order, $this->kitchenPrinterForOrder($order), $actor);
+        $payment = app(CheckoutTable::class)->handle($order, $actor);
+        $receiptPrinter = Printer::query()
+            ->where('store_id', $order->store_id)
+            ->where('printer_type', PrinterType::Receipt->value)
+            ->where('is_active', true)
+            ->firstOrFail();
+
+        $firstJob = app(CreateReceiptPrintJob::class)->handle($payment, $receiptPrinter, $actor);
+        $retriedJob = app(CreateReceiptPrintJob::class)->handle($payment->refresh(), $receiptPrinter, $actor);
+
+        $this->assertSame($firstJob->id, $retriedJob->id);
+        $this->assertSame(PrintType::Receipt, $firstJob->print_type);
+        $this->assertSame(80, $firstJob->payload['document']['paper_width_mm']);
+        $this->assertSame(576, $firstJob->payload['document']['dots_per_line']);
+        $this->assertSame('vi-VN', $firstJob->payload['document']['locale']);
+        $this->assertSame((int) $payment->amount, $firstJob->payload['payment']['amount']);
+        $this->assertSame($product->name, $firstJob->payload['order']['items'][0]['name']);
+    }
+
+    /** Checkout orchestration phải trả Payment và receipt job trong hai bước tách biệt. */
+    public function test_checkout_orchestration_queues_a_receipt_after_payment_completes(): void
+    {
+        $actor = $this->owner();
+        $order = $this->openOrder($actor);
+        $product = $this->productForOrder($order);
+        $order = app(AddOrderItems::class)->handle($order, $actor, [[
+            'product_id' => $product->id,
+            'quantity' => 1,
+        ]]);
+        app(CreateKitchenPrintJob::class)->handle($order, $this->kitchenPrinterForOrder($order), $actor);
+        $receiptPrinter = $this->receiptPrinterForOrder($order);
+
+        $result = app(CheckoutAndQueueReceipt::class)->handle(
+            $order,
+            $actor,
+            $receiptPrinter,
+            clientRequestId: (string) Str::uuid(),
+        );
+
+        $this->assertSame(PaymentStatus::Completed, $result['payment']->status);
+        $this->assertSame(PrintType::Receipt, $result['receiptPrintJob']?->print_type);
+        $this->assertNull($result['receiptError']);
+        $this->assertSame(OrderStatus::Paid, $order->refresh()->status);
+    }
+
+    /** Lỗi cấu hình receipt không được rollback Payment hoặc mở lại bàn. */
+    public function test_receipt_queue_failure_does_not_rollback_a_completed_payment(): void
+    {
+        $actor = $this->owner();
+        $order = $this->openOrder($actor);
+        $product = $this->productForOrder($order);
+        $order = app(AddOrderItems::class)->handle($order, $actor, [[
+            'product_id' => $product->id,
+            'quantity' => 1,
+        ]]);
+        app(CreateKitchenPrintJob::class)->handle($order, $this->kitchenPrinterForOrder($order), $actor);
+        $receiptPrinter = $this->receiptPrinterForOrder($order);
+        $receiptPrinter->update(['is_active' => false]);
+
+        $result = app(CheckoutAndQueueReceipt::class)->handle(
+            $order,
+            $actor,
+            $receiptPrinter,
+            clientRequestId: (string) Str::uuid(),
+        );
+
+        $this->assertSame(PaymentStatus::Completed, $result['payment']->status);
+        $this->assertNull($result['receiptPrintJob']);
+        $this->assertSame('Máy in hóa đơn không hợp lệ cho cửa hàng này.', $result['receiptError']);
+        $this->assertSame(OrderStatus::Paid, $order->refresh()->status);
+        $this->assertSame(TableSessionStatus::Closed, $order->tableSession->refresh()->status);
+        $this->assertSame(0, $order->printJobs()->where('print_type', PrintType::Receipt->value)->count());
+    }
+
+    /** Hóa đơn đã in được xếp hàng lại bằng chính snapshot mà không tạo Payment mới. */
+    public function test_printed_receipt_can_be_reprinted_with_the_original_snapshot(): void
+    {
+        $actor = $this->owner();
+        $order = $this->openOrder($actor);
+        $product = $this->productForOrder($order);
+        $order = app(AddOrderItems::class)->handle($order, $actor, [[
+            'product_id' => $product->id,
+            'quantity' => 1,
+        ]]);
+        app(CreateKitchenPrintJob::class)->handle($order, $this->kitchenPrinterForOrder($order), $actor);
+        $payment = app(CheckoutTable::class)->handle($order, $actor);
+        $job = app(CreateReceiptPrintJob::class)->handle($payment, $this->receiptPrinterForOrder($order), $actor);
+        $job->forceFill([
+            'status' => PrintJobStatus::Printed,
+            'attempts' => 1,
+            'printed_at' => now(),
+        ])->save();
+        $originalPayload = $job->payload;
+
+        $retriedJob = app(RetryPrintJob::class)->handle($job, $actor);
+
+        $this->assertSame(PrintJobStatus::Pending, $retriedJob->status);
+        $this->assertNull($retriedJob->printed_at);
+        $this->assertSame(1, $retriedJob->attempts);
+        $this->assertSame($originalPayload, $retriedJob->payload);
+        $this->assertSame(1, Payment::query()->where('order_id', $order->id)->count());
     }
 
     /** Checkout phải dừng nếu còn món mới chưa được đưa vào bất kỳ phiếu bếp nào. */
@@ -293,6 +480,16 @@ class PosWorkflowActionsTest extends TestCase
         return Printer::query()
             ->where('store_id', $order->store_id)
             ->where('printer_type', PrinterType::Kitchen->value)
+            ->where('is_active', true)
+            ->firstOrFail();
+    }
+
+    /** Chọn máy in hóa đơn đang hoạt động thuộc đúng tenant của order. */
+    private function receiptPrinterForOrder(Order $order): Printer
+    {
+        return Printer::query()
+            ->where('store_id', $order->store_id)
+            ->where('printer_type', PrinterType::Receipt->value)
             ->where('is_active', true)
             ->firstOrFail();
     }

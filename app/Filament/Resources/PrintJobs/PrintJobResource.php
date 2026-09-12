@@ -3,8 +3,6 @@
 namespace App\Filament\Resources\PrintJobs;
 
 use App\Filament\Resources\Concerns\IsPosTransactionReadOnly;
-use App\Filament\Resources\PrintJobs\Pages\CreatePrintJob;
-use App\Filament\Resources\PrintJobs\Pages\EditPrintJob;
 use App\Filament\Resources\PrintJobs\Pages\ListPrintJobs;
 use App\Filament\Resources\PrintJobs\Schemas\PrintJobForm;
 use App\Filament\Resources\PrintJobs\Tables\PrintJobsTable;
@@ -49,8 +47,6 @@ class PrintJobResource extends Resource
     {
         return [
             'index' => ListPrintJobs::route('/'),
-            'create' => CreatePrintJob::route('/create'),
-            'edit' => EditPrintJob::route('/{record}/edit'),
         ];
     }
 }

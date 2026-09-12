@@ -4,47 +4,67 @@ namespace App\Actions\Pos;
 
 use App\Enums\OrderStatus;
 use App\Enums\TableSessionStatus;
+use App\Events\PosStateChanged;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\TableSession;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
-/** Cập nhật số lượng hoặc ghi chú của một dòng món nhưng không cho sửa giá snapshot. */
+/** Cập nhật số lượng, ghi chú hoặc giá snapshot của một dòng món. */
 final class UpdateOrderItem
 {
     public function __construct(private readonly RecalculateOrderTotal $recalculateOrderTotal) {}
 
     /**
-     * Món đã gửi bếp không được giảm số lượng hoặc đổi ghi chú vì bếp đã nhận
-     * thông tin cũ. Nghiệp vụ hủy món sau khi in sẽ cần một action và phiếu hủy
-     * riêng ở giai đoạn sau để lịch sử luôn truy vết được.
+     * Món đã gửi bếp vẫn được giảm số lượng vì khách có thể phản hồi món bị nhập
+     * sai. Khi số lượng về 0, dòng món bị xóa khỏi order hiện tại. Ghi chú vẫn
+     * khóa sau khi in để nội dung chế biến không bị đổi âm thầm.
      */
-    public function handle(OrderItem $orderItem, User $actor, int $quantity, ?string $notes = null): OrderItem
+    public function handle(
+        OrderItem $orderItem,
+        User $actor,
+        int $quantity,
+        ?string $notes = null,
+        ?int $unitPrice = null,
+    ): OrderItem
     {
         $validated = Validator::make(
-            ['quantity' => $quantity, 'notes' => $notes],
+            ['quantity' => $quantity, 'notes' => $notes, 'unit_price' => $unitPrice],
             [
-                'quantity' => ['required', 'integer', 'min:1', 'max:999'],
+                'quantity' => ['required', 'integer', 'min:0', 'max:999'],
                 'notes' => ['nullable', 'string', 'max:1000'],
+                'unit_price' => ['nullable', 'integer', 'min:0', 'max:999999999'],
             ],
-            attributes: ['quantity' => 'số lượng', 'notes' => 'ghi chú món'],
+            attributes: ['quantity' => 'số lượng', 'notes' => 'ghi chú món', 'unit_price' => 'đơn giá món'],
         )->validate();
 
-        return DB::transaction(function () use ($orderItem, $actor, $validated): OrderItem {
+        $updatedItem = DB::transaction(function () use ($orderItem, $actor, $validated): OrderItem {
+            // Chỉ dùng ID model đầu vào; order_id phải đọc lại từ bản ghi authoritative trong DB.
+            $authoritativeOrderId = OrderItem::query()
+                ->whereKey($orderItem->getKey())
+                ->value('order_id');
+
             // Khóa order trước item để mọi action cùng một thứ tự khóa, hạn chế deadlock.
             /** @var Order $lockedOrder */
             $lockedOrder = Order::query()
                 ->with('tableSession')
                 ->lockForUpdate()
-                ->findOrFail($orderItem->order_id);
+                ->findOrFail($authoritativeOrderId);
 
             /** @var OrderItem $lockedItem */
             $lockedItem = OrderItem::query()
                 ->lockForUpdate()
                 ->findOrFail($orderItem->getKey());
+
+            if ((int) $lockedItem->order_id !== (int) $lockedOrder->getKey()) {
+                throw ValidationException::withMessages([
+                    'order_id' => 'Dòng món vừa thay đổi order, vui lòng tải lại trước khi thao tác.',
+                ]);
+            }
 
             Gate::forUser($actor)->authorize('update', $lockedItem);
 
@@ -58,10 +78,29 @@ final class UpdateOrderItem
                 ? trim((string) $validated['notes'])
                 : null;
 
-            if ((int) $validated['quantity'] < $lockedItem->kitchen_printed_quantity) {
-                throw ValidationException::withMessages([
-                    'quantity' => 'Số lượng không được nhỏ hơn phần đã in cho bếp.',
-                ]);
+            if ((int) $validated['quantity'] === 0) {
+                $lockedItem->delete();
+                $updatedOrder = $this->recalculateOrderTotal->handle($lockedOrder);
+
+                if (! $updatedOrder->items()->exists()) {
+                    /** @var TableSession $lockedSession */
+                    $lockedSession = TableSession::query()
+                        ->lockForUpdate()
+                        ->findOrFail($updatedOrder->table_session_id);
+                    $updatedOrder->forceFill(['status' => OrderStatus::Cancelled])->save();
+                    $lockedSession->forceFill([
+                        'status' => TableSessionStatus::Cancelled,
+                        'end_time' => now(),
+                        'closed_by' => $actor->getKey(),
+                    ])->save();
+                    $updatedOrder->setRelation('tableSession', $lockedSession);
+                } else {
+                    $updatedOrder->load('tableSession');
+                }
+
+                $lockedItem->setRelation('order', $updatedOrder);
+
+                return $lockedItem;
             }
 
             if ($lockedItem->kitchen_printed_quantity > 0 && $normalizedNotes !== $lockedItem->notes) {
@@ -70,14 +109,26 @@ final class UpdateOrderItem
                 ]);
             }
 
-            $lockedItem->forceFill([
+            $changes = [
                 'quantity' => (int) $validated['quantity'],
                 'notes' => $normalizedNotes,
-            ])->save();
+            ];
+            if ($validated['unit_price'] !== null) {
+                $changes['unit_price'] = (int) $validated['unit_price'];
+            }
+            $lockedItem->forceFill($changes)->save();
 
             $this->recalculateOrderTotal->handle($lockedOrder);
 
-            return $lockedItem->refresh()->load(['order', 'product']);
+            return $lockedItem->refresh()->load(['order.tableSession', 'product']);
         });
+
+        PosStateChanged::dispatch(
+            (int) $updatedItem->store_id,
+            (int) $updatedItem->order->tableSession->table_id,
+            $updatedItem->order->status === OrderStatus::Cancelled ? 'session.cancelled' : 'order.item-updated',
+        );
+
+        return $updatedItem;
     }
 }

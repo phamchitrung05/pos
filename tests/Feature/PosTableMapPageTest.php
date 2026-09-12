@@ -2,13 +2,13 @@
 
 namespace Tests\Feature;
 
-use App\Enums\OrderStatus;
 use App\Enums\PrinterType;
+use App\Enums\PrintType;
 use App\Enums\TableSessionStatus;
 use App\Filament\Pages\Pos\TableMap;
+use App\Livewire\Pos\TableGrid;
 use App\Models\DiningTable;
 use App\Models\Order;
-use App\Models\Payment;
 use App\Models\Printer;
 use App\Models\Product;
 use App\Models\Store;
@@ -39,22 +39,41 @@ class PosTableMapPageTest extends TestCase
 
         $this->actingAs($owner)
             ->get(TableMap::getUrl(panel: 'admin', tenant: $store))
-            ->assertOk();
+            ->assertOk()
+            ->assertSee(DiningTable::query()->where('store_id', $store->id)->firstOrFail()->name)
+            ->assertDontSee('Khu A - Tầng trệt');
 
         Filament::setCurrentPanel('admin');
         Filament::setTenant($store, isQuiet: true);
 
         $component = Livewire::test(TableMap::class);
-        $tableMap = $component->viewData('tableMap');
+        $pageData = $component->viewData('tableMap');
+        $tableMap = Livewire::test(TableGrid::class, ['storeId' => $store->id])->viewData('tableMap');
 
         $this->assertSame(DiningTable::query()->where('store_id', $store->id)->count(), $tableMap['statistics']['total']);
         $this->assertCount($tableMap['statistics']['total'], $tableMap['tables']);
-        $this->assertNotEmpty($tableMap['catalog']);
-        $this->assertNotEmpty($tableMap['kitchenPrinters']);
+        $this->assertNotEmpty($pageData['catalog']);
+        $this->assertNotEmpty($pageData['kitchenPrinters']);
     }
 
-    /** Các method Livewire phải chạy trọn luồng mở bàn, thêm món, in bếp và checkout. */
-    public function test_page_methods_execute_the_complete_pos_workflow(): void
+    /** Page cha xác thực bàn, cập nhật state rồi yêu cầu Filament mở modal chi tiết. */
+    public function test_selecting_a_table_opens_the_table_modal(): void
+    {
+        [$owner, $store] = $this->ownerAndStore();
+        $table = DiningTable::query()->where('store_id', $store->id)->firstOrFail();
+        $this->actingAs($owner);
+        Filament::setCurrentPanel('admin');
+        Filament::setTenant($store, isQuiet: true);
+
+        Livewire::test(TableMap::class)
+            ->call('selectTable', $table->id)
+            ->assertSet('selectedTableId', $table->id)
+            ->assertDispatched('open-modal', id: 'table-details')
+            ->assertSeeHtml('id="table-details"');
+    }
+
+    /** Filament giữ luồng test mở bàn, thêm món và gửi bếp nhưng không thực hiện checkout. */
+    public function test_page_methods_execute_the_filament_monitoring_workflow(): void
     {
         [$owner, $store] = $this->ownerAndStore();
         $table = DiningTable::query()
@@ -81,9 +100,10 @@ class PosTableMapPageTest extends TestCase
                 'notes' => 'Ít đá',
             ]])
             ->call('addItems')
+            ->assertSee($product->name)
+            ->assertSee(number_format((float) $product->price * 2, 0, ',', '.').' đ')
             ->set('selectedKitchenPrinterId', $printer->id)
             ->call('createKitchenTicket')
-            ->call('checkout')
             ->assertHasNoErrors();
 
         $session = TableSession::query()
@@ -92,11 +112,10 @@ class PosTableMapPageTest extends TestCase
             ->firstOrFail();
         $order = Order::query()->where('table_session_id', $session->id)->firstOrFail();
 
-        $this->assertSame(TableSessionStatus::Closed, $session->status);
-        $this->assertSame(OrderStatus::Paid, $order->status);
+        $this->assertSame(TableSessionStatus::Open, $session->status);
         $this->assertSame(2, $order->items()->firstOrFail()->quantity);
-        $this->assertSame(1, $order->printJobs()->count());
-        $this->assertSame(1, Payment::query()->where('order_id', $order->id)->count());
+        $this->assertSame(1, $order->printJobs()->where('print_type', PrintType::Kitchen->value)->count());
+        $this->assertSame(0, $order->printJobs()->where('print_type', PrintType::Receipt->value)->count());
     }
 
     /** Middleware tenant phải chặn staff truy cập standalone Page của chi nhánh khác. */

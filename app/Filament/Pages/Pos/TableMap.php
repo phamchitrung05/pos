@@ -3,11 +3,9 @@
 namespace App\Filament\Pages\Pos;
 
 use App\Actions\Pos\AddOrderItems;
-use App\Actions\Pos\CheckoutTable;
 use App\Actions\Pos\CreateKitchenPrintJob;
 use App\Actions\Pos\OpenTableSession;
 use App\Actions\Pos\UpdateOrderItem;
-use App\Enums\PaymentStatus;
 use App\Enums\PrinterType;
 use App\Enums\TableSessionStatus;
 use App\Models\DiningTable;
@@ -19,16 +17,13 @@ use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Store;
 use App\Models\TableSession;
-use App\Models\TableZone;
 use App\Models\User;
+use App\Queries\Pos\TableMapReadModel;
 use BackedEnum;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
-use Illuminate\Database\Eloquent\Collection as EloquentCollection;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use UnitEnum;
 
@@ -42,10 +37,8 @@ use UnitEnum;
  */
 class TableMap extends Page
 {
-    /** View được cố ý để trống phần giao diện để người dùng tự triển khai thiết kế. */
+    /** Giao diện sơ đồ bàn giữ vai trò adapter, mọi ghi dữ liệu đi qua application action. */
     protected string $view = 'filament.pages.pos.table-map';
-
-    protected static ?string $slug = 'pos/table-map';
 
     protected static ?string $title = 'Sơ đồ bàn';
 
@@ -57,17 +50,20 @@ class TableMap extends Page
 
     protected static ?int $navigationSort = -100;
 
+    /** Trang dùng header POS riêng để toàn bộ phần còn lại vừa đúng chiều cao viewport. */
+    public function getHeading(): null
+    {
+        return null;
+    }
+
+    /** Không dựng breadcrumb Filament vì header POS đã thể hiện ngữ cảnh điều hướng. */
+    public function getBreadcrumbs(): array
+    {
+        return [];
+    }
+
     /** ID bàn đang mở panel chi tiết; null nghĩa là chưa chọn bàn. */
     public ?int $selectedTableId = null;
-
-    /** ID khu vực cần hiển thị hoặc chuỗi `all` để hiển thị toàn bộ. */
-    public string $zoneFilter = 'all';
-
-    /** Trạng thái lọc hỗ trợ `all`, `empty` và `occupied`. */
-    public string $statusFilter = 'all';
-
-    /** Từ khóa tìm theo tên bàn, được áp dụng phía server khi component render lại. */
-    public string $search = '';
 
     /**
      * Danh sách món đang chờ gửi từ giao diện.
@@ -78,9 +74,6 @@ class TableMap extends Page
 
     /** Máy in bếp được chọn; null sẽ dùng máy in bếp hoạt động đầu tiên của Store. */
     public ?int $selectedKitchenPrinterId = null;
-
-    /** UUID dùng lại trong các lần gọi checkout khi state Livewire hiện tại vẫn còn hiệu lực. */
-    public ?string $checkoutRequestId = null;
 
     /**
      * Yêu cầu đủ quyền đọc mọi dữ liệu được tổng hợp trên trang.
@@ -109,108 +102,132 @@ class TableMap extends Page
     /**
      * Cung cấp contract dữ liệu duy nhất cho Blade.
      *
-     * Blade tương lai nhận biến `$tableMap` gồm `zones`, `tables`, `groups`,
-     * `statistics`, `selectedTable`, `catalog`, `kitchenPrinters` và
-     * `refreshedAt`. Polling chỉ cần dùng `wire:poll.3s="refreshTableMap"`.
+     * Page cha chỉ nạp panel đang chọn và dữ liệu ít thay đổi. Tổng quan bàn
+     * được giao cho TableGrid để WebSocket không morph giỏ món của Page.
      *
      * @return array<string, mixed>
      */
     protected function getViewData(): array
     {
         return [
-            'tableMap' => $this->buildTableMapData(),
+            'tableMap' => $this->buildTableMapData(app(TableMapReadModel::class)),
         ];
     }
 
     /**
-     * Nạp snapshot mới nhất của sơ đồ bàn trong đúng tenant hiện tại.
+     * Nạp riêng contract của Page cha, không query danh sách tất cả bàn.
      *
-     * @return array{
-     *     zones: array<int, array{id: int, name: string}>,
-     *     tables: array<int, array<string, mixed>>,
-     *     groups: array<int, array{id: int|string, name: string, tables: array<int, array<string, mixed>>}>,
-     *     statistics: array{total: int, occupied: int, empty: int, todayRevenue: float},
-     *     selectedTable: array<string, mixed>|null,
-     *     catalog: array<int, array<string, mixed>>,
-     *     kitchenPrinters: array<int, array<string, mixed>>,
-     *     refreshedAt: string
-     * }
+     * @return array<string, mixed>
      */
-    private function buildTableMapData(): array
+    private function buildTableMapData(TableMapReadModel $readModel): array
     {
         $store = $this->currentStore();
 
-        /** @var EloquentCollection<int, DiningTable> $tables */
-        $tables = DiningTable::query()
-            ->where('store_id', $store->getKey())
-            ->with([
-                'zone',
-                'sessions' => fn ($query) => $query
-                    ->where('status', TableSessionStatus::Open->value)
-                    ->with(['order.items.product']),
-            ])
-            ->orderBy('name')
-            ->get();
-
-        $allTables = $tables
-            ->map(fn (DiningTable $table): array => $this->formatTable($table))
-            ->values();
-
-        $visibleTables = $allTables
-            ->when(
-                $this->zoneFilter !== 'all',
-                fn (Collection $items): Collection => $items->where('zone.id', (int) $this->zoneFilter),
-            )
-            ->when(
-                in_array($this->statusFilter, ['empty', 'occupied'], true),
-                fn (Collection $items): Collection => $items->where('status', $this->statusFilter),
-            )
-            ->when(
-                filled($this->search),
-                fn (Collection $items): Collection => $items->filter(
-                    fn (array $table): bool => str_contains(
-                        mb_strtolower($table['name']),
-                        mb_strtolower(trim($this->search)),
-                    ),
-                ),
-            )
-            ->values();
-
-        $zones = TableZone::query()
-            ->where('store_id', $store->getKey())
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get(['id', 'name']);
-
         return [
-            'zones' => $zones->map(fn (TableZone $zone): array => [
-                'id' => (int) $zone->getKey(),
-                'name' => $zone->name,
-            ])->values()->all(),
-            'tables' => $visibleTables->all(),
-            'groups' => $this->groupTablesByZone($visibleTables),
-            'statistics' => [
-                'total' => $allTables->count(),
-                'occupied' => $allTables->where('status', 'occupied')->count(),
-                'empty' => $allTables->where('status', 'empty')->count(),
-                'todayRevenue' => (float) $store->payments()
-                    ->where('status', PaymentStatus::Completed->value)
-                    ->whereDate('paid_at', today())
-                    ->sum('amount'),
-            ],
-            'selectedTable' => $allTables->firstWhere('id', $this->selectedTableId),
-            'catalog' => $this->getCatalog($store),
-            'kitchenPrinters' => $this->getKitchenPrinters($store),
+            'storeId' => (int) $store->getKey(),
+            'selectedTable' => $readModel->selectedTable($store, $this->selectedTableId),
+            'catalog' => $readModel->catalog($store),
+            'kitchenPrinters' => $readModel->kitchenPrinters($store),
             'refreshedAt' => now()->toIso8601String(),
         ];
+    }
+
+    /** Đăng ký channel realtime theo Store; event bàn khác sẽ bị bỏ qua ở Page cha. */
+    protected function getListeners(): array
+    {
+        $store = Filament::getTenant();
+
+        if (! $store instanceof Store) {
+            return [];
+        }
+
+        return [
+            "echo-private:stores.{$store->getKey()}.pos,.pos.state.changed" => 'syncSelectedTableFromRealtime',
+        ];
+    }
+
+    /** Chỉ refresh panel khi dữ liệu của chính bàn đang chọn đã thay đổi. */
+    public function syncSelectedTableFromRealtime(array $event): void
+    {
+        $isSelectedTable = $this->selectedTableId !== null
+            && (int) ($event['storeId'] ?? 0) === (int) $this->currentStore()->getKey()
+            && (int) ($event['tableId'] ?? 0) === $this->selectedTableId;
+
+        if (! $isSelectedTable) {
+            $this->skipRender();
+        }
     }
 
     /** Chọn một bàn để Blade hiển thị panel order hoặc thao tác mở bàn. */
     public function selectTable(int $tableId): void
     {
         $this->findTableInCurrentStore($tableId);
+
+        if ($this->selectedTableId !== $tableId) {
+            $this->draftItems = [];
+        }
+
         $this->selectedTableId = $tableId;
         $this->resetValidation();
+
+        // Client đã mở modal tức thì; các event này hoàn tất loading sau khi tenant được xác thực.
+        $this->dispatch('open-modal', id: 'table-details');
+        $this->dispatch('table-modal-loaded');
+    }
+
+    /** Thêm một sản phẩm vào giỏ tạm; giá bán luôn được action đọc lại từ database. */
+    public function addProductToDraft(int $productId): void
+    {
+        $product = Product::query()
+            ->where('store_id', $this->currentStore()->getKey())
+            ->where('is_active', true)
+            ->findOrFail($productId);
+        $index = collect($this->draftItems)->search(
+            fn (array $item): bool => (int) $item['product_id'] === (int) $product->getKey(),
+        );
+
+        if ($index === false) {
+            $this->draftItems[] = [
+                'product_id' => (int) $product->getKey(),
+                'quantity' => 1,
+                'notes' => null,
+            ];
+
+            return;
+        }
+
+        $this->draftItems[$index]['quantity'] = min(999, (int) $this->draftItems[$index]['quantity'] + 1);
+    }
+
+    /** Tăng hoặc giảm số lượng trong giỏ tạm, tự xóa dòng khi số lượng về không. */
+    public function changeDraftQuantity(int $productId, int $delta): void
+    {
+        $index = collect($this->draftItems)->search(
+            fn (array $item): bool => (int) $item['product_id'] === $productId,
+        );
+
+        if ($index === false) {
+            return;
+        }
+
+        $quantity = (int) $this->draftItems[$index]['quantity'] + $delta;
+
+        if ($quantity < 1) {
+            $this->removeDraftItem($productId);
+
+            return;
+        }
+
+        $this->draftItems[$index]['quantity'] = min(999, $quantity);
+    }
+
+    /** Xóa sản phẩm khỏi giỏ tạm và đánh lại index để Livewire hydrate ổn định. */
+    public function removeDraftItem(int $productId): void
+    {
+        $this->draftItems = collect($this->draftItems)
+            ->reject(fn (array $item): bool => (int) $item['product_id'] === $productId)
+            ->values()
+            ->all();
     }
 
     /** Đóng panel chi tiết mà không thay đổi session hoặc order trong database. */
@@ -218,8 +235,8 @@ class TableMap extends Page
     {
         $this->selectedTableId = null;
         $this->draftItems = [];
-        $this->checkoutRequestId = null;
         $this->resetValidation();
+        $this->dispatch('close-modal', id: 'table-details');
     }
 
     /**
@@ -285,6 +302,17 @@ class TableMap extends Page
             ->send();
     }
 
+    /** Đổi số lượng nhưng giữ nguyên ghi chú hiện tại, đặc biệt với món đã gửi bếp. */
+    public function changeOrderItemQuantity(int $orderItemId, int $quantity): void
+    {
+        $orderItem = OrderItem::query()
+            ->where('store_id', $this->currentStore()->getKey())
+            ->where('order_id', $this->activeOrderForSelectedTable()->getKey())
+            ->findOrFail($orderItemId);
+
+        $this->updateItem($orderItemId, $quantity, $orderItem->notes);
+    }
+
     /** Tạo snapshot phiếu bếp bằng máy được chọn hoặc máy bếp mặc định của Store. */
     public function createKitchenTicket(?int $printerId = null): void
     {
@@ -302,148 +330,6 @@ class TableMap extends Page
             ->body('Thiết bị tại cửa hàng cần nhận PrintJob và gửi tới máy in LAN.')
             ->success()
             ->send();
-    }
-
-    /** Thanh toán tiền mặt, đóng order/session và làm bàn trở về trạng thái trống. */
-    public function checkout(): void
-    {
-        $order = $this->activeOrderForSelectedTable();
-        $this->checkoutRequestId ??= (string) Str::uuid();
-
-        $payment = app(CheckoutTable::class)->handle(
-            $order,
-            $this->currentUser(),
-            clientRequestId: $this->checkoutRequestId,
-        );
-
-        // Chỉ xóa UUID sau khi Laravel xác nhận để retry trong cùng component vẫn idempotent.
-        $this->checkoutRequestId = null;
-        $this->draftItems = [];
-        $this->resetValidation();
-
-        Notification::make()
-            ->title('Thanh toán thành công')
-            ->body('Số tiền: '.number_format((float) $payment->amount, 0, ',', '.').' đ')
-            ->success()
-            ->send();
-    }
-
-    /**
-     * Hook rỗng dành cho `wire:poll`; một Livewire request mới tự render lại
-     * Page và gọi `getViewData()`, do đó không cần giữ bản sao dữ liệu trong state.
-     */
-    public function refreshTableMap(): void
-    {
-        // Không mutate state để filter và bàn đang chọn được giữ nguyên qua mỗi lần poll.
-    }
-
-    /** Chuyển model bàn cùng quan hệ active thành payload thuần dành cho Blade. */
-    private function formatTable(DiningTable $table): array
-    {
-        /** @var TableSession|null $session */
-        $session = $table->sessions->first();
-        $order = $session?->order;
-        $items = $order?->items ?? new EloquentCollection;
-        $elapsedSeconds = $session?->start_time
-            ? max(0, (int) $session->start_time->diffInSeconds(now()))
-            : 0;
-
-        return [
-            'id' => (int) $table->getKey(),
-            'name' => $table->name,
-            'zone' => [
-                'id' => $table->zone ? (int) $table->zone->getKey() : null,
-                'name' => $table->zone?->name ?? 'Chưa phân khu',
-            ],
-            'status' => $session ? 'occupied' : 'empty',
-            'session' => $session ? [
-                'id' => (int) $session->getKey(),
-                'startTime' => $session->start_time?->toIso8601String(),
-                'elapsedSeconds' => $elapsedSeconds,
-            ] : null,
-            'order' => $order ? [
-                'id' => (int) $order->getKey(),
-                'code' => $order->code,
-                'status' => $order->status->value,
-                'total' => (float) $order->total,
-                'totalLabel' => number_format((float) $order->total, 0, ',', '.').' đ',
-                'hasUnprintedItems' => $items->contains(
-                    fn (OrderItem $item): bool => $item->quantity > $item->kitchen_printed_quantity,
-                ),
-                'items' => $items->map(fn (OrderItem $item): array => [
-                    'id' => (int) $item->getKey(),
-                    'productId' => (int) $item->product_id,
-                    'name' => $item->product?->name ?? 'Sản phẩm đã xóa',
-                    'quantity' => $item->quantity,
-                    'kitchenPrintedQuantity' => $item->kitchen_printed_quantity,
-                    'unitPrice' => (float) $item->unit_price,
-                    'subtotal' => (float) $item->unit_price * $item->quantity,
-                    'notes' => $item->notes,
-                ])->values()->all(),
-            ] : null,
-        ];
-    }
-
-    /** Gom danh sách đã lọc thành từng khu vực để Blade có thể render theo section. */
-    private function groupTablesByZone(Collection $tables): array
-    {
-        return $tables
-            ->groupBy(fn (array $table): string => (string) ($table['zone']['id'] ?? 'unassigned'))
-            ->map(fn (Collection $zoneTables, string $zoneId): array => [
-                'id' => $zoneId === 'unassigned' ? 'unassigned' : (int) $zoneId,
-                'name' => $zoneTables->first()['zone']['name'],
-                'tables' => $zoneTables->values()->all(),
-            ])
-            ->values()
-            ->all();
-    }
-
-    /** Nạp thực đơn đang bán theo nhóm để giao diện thêm món không tự truy vấn database. */
-    private function getCatalog(Store $store): array
-    {
-        return ProductGroup::query()
-            ->where('store_id', $store->getKey())
-            ->where('is_active', true)
-            ->with(['products' => fn ($query) => $query
-                ->where('store_id', $store->getKey())
-                ->where('is_active', true)
-                ->orderBy('name'),
-            ])
-            ->orderBy('sort_order')
-            ->orderBy('name')
-            ->get()
-            ->map(fn (ProductGroup $group): array => [
-                'id' => (int) $group->getKey(),
-                'name' => $group->name,
-                'icon' => $group->icon,
-                'products' => $group->products->map(fn ($product): array => [
-                    'id' => (int) $product->getKey(),
-                    'name' => $product->name,
-                    'price' => (float) $product->price,
-                    'priceLabel' => number_format((float) $product->price, 0, ',', '.').' đ',
-                ])->values()->all(),
-            ])
-            ->values()
-            ->all();
-    }
-
-    /** Trả danh sách máy in bếp đang hoạt động để Blade dựng lựa chọn máy in. */
-    private function getKitchenPrinters(Store $store): array
-    {
-        return Printer::query()
-            ->where('store_id', $store->getKey())
-            ->where('printer_type', PrinterType::Kitchen->value)
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get()
-            ->map(fn (Printer $printer): array => [
-                'id' => (int) $printer->getKey(),
-                'name' => $printer->name,
-                'ipAddress' => $printer->ip_address,
-                'port' => $printer->port,
-            ])
-            ->values()
-            ->all();
     }
 
     /** Lấy bàn theo tenant thay vì tin table ID gửi từ Livewire frontend. */

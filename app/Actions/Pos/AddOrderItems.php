@@ -4,6 +4,7 @@ namespace App\Actions\Pos;
 
 use App\Enums\OrderStatus;
 use App\Enums\TableSessionStatus;
+use App\Events\PosStateChanged;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
@@ -20,10 +21,10 @@ final class AddOrderItems
     public function __construct(private readonly RecalculateOrderTotal $recalculateOrderTotal) {}
 
     /**
-     * @param  array<int, array{product_id: int, quantity: int, notes?: string|null}>  $items
+     * @param  array<int, array{product_id: int, quantity: int, notes?: string|null, unit_price?: int}>  $items
      *
-     * Danh sách đầu vào chỉ chứa ID sản phẩm, số lượng và ghi chú. Đơn giá luôn
-     * được đọc lại từ Product phía server, vì vậy client không thể tự thay đổi giá.
+     * Nếu nhân viên không đổi giá, action chụp giá Product tại server. Giá tùy
+     * chỉnh vẫn đi qua command journal và policy nên có thể truy vết người thao tác.
      */
     public function handle(Order $order, User $actor, array $items): Order
     {
@@ -34,16 +35,18 @@ final class AddOrderItems
                 'items.*.product_id' => ['required', 'integer'],
                 'items.*.quantity' => ['required', 'integer', 'min:1', 'max:999'],
                 'items.*.notes' => ['nullable', 'string', 'max:1000'],
+                'items.*.unit_price' => ['sometimes', 'integer', 'min:0', 'max:999999999'],
             ],
             attributes: [
                 'items' => 'danh sách món',
                 'items.*.product_id' => 'sản phẩm',
                 'items.*.quantity' => 'số lượng',
                 'items.*.notes' => 'ghi chú món',
+                'items.*.unit_price' => 'đơn giá món',
             ],
         )->validate()['items'];
 
-        return DB::transaction(function () use ($order, $actor, $validatedItems): Order {
+        $updatedOrder = DB::transaction(function () use ($order, $actor, $validatedItems): Order {
             /** @var Order $lockedOrder */
             $lockedOrder = Order::query()
                 ->with('tableSession')
@@ -103,10 +106,12 @@ final class AddOrderItems
                         ]);
                     }
 
-                    // Giữ giá snapshot ban đầu; phần số lượng tăng sẽ được nhận diện khi in bếp lần kế tiếp.
-                    $existingItem->forceFill([
-                        'quantity' => $newQuantity,
-                    ])->save();
+                    $changes = ['quantity' => $newQuantity];
+                    if (array_key_exists('unit_price', $itemData)) {
+                        // Popup giá áp dụng cho cả dòng gộp, gồm số lượng cũ và phần vừa thêm.
+                        $changes['unit_price'] = (int) $itemData['unit_price'];
+                    }
+                    $existingItem->forceFill($changes)->save();
 
                     continue;
                 }
@@ -118,7 +123,9 @@ final class AddOrderItems
                     'product_id' => $product->getKey(),
                     'quantity' => (int) $itemData['quantity'],
                     'kitchen_printed_quantity' => 0,
-                    'unit_price' => $product->price,
+                    'unit_price' => array_key_exists('unit_price', $itemData)
+                        ? (int) $itemData['unit_price']
+                        : $product->price,
                     'notes' => $notes,
                 ]);
                 $newItem->save();
@@ -128,5 +135,9 @@ final class AddOrderItems
                 ->handle($lockedOrder)
                 ->load(['items.product', 'tableSession.table']);
         });
+
+        PosStateChanged::dispatch((int) $updatedOrder->store_id, (int) $updatedOrder->tableSession->table_id, 'order.items-added');
+
+        return $updatedOrder;
     }
 }

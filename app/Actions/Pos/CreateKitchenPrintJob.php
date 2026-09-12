@@ -7,6 +7,7 @@ use App\Enums\PrinterType;
 use App\Enums\PrintJobStatus;
 use App\Enums\PrintType;
 use App\Enums\TableSessionStatus;
+use App\Events\PosStateChanged;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Printer;
@@ -27,7 +28,7 @@ final class CreateKitchenPrintJob
      */
     public function handle(Order $order, Printer $printer, User $actor): PrintJob
     {
-        return DB::transaction(function () use ($order, $printer, $actor): PrintJob {
+        $printJob = DB::transaction(function () use ($order, $printer, $actor): PrintJob {
             /** @var Order $lockedOrder */
             $lockedOrder = Order::query()
                 ->with(['store', 'tableSession.table'])
@@ -55,7 +56,10 @@ final class CreateKitchenPrintJob
                 ]);
             }
 
-            if (! $lockedPrinter->is_active || $lockedPrinter->printer_type !== PrinterType::Kitchen) {
+            if (! $lockedPrinter->is_active
+                || blank($lockedPrinter->ip_address)
+                || ! $lockedPrinter->port
+                || $lockedPrinter->printer_type !== PrinterType::Kitchen) {
                 throw ValidationException::withMessages([
                     'printer_id' => 'Máy in được chọn không phải máy in bếp đang hoạt động.',
                 ]);
@@ -86,6 +90,12 @@ final class CreateKitchenPrintJob
                 'printer' => [
                     'id' => (int) $lockedPrinter->getKey(),
                     'name' => $lockedPrinter->name,
+                ],
+                'document' => [
+                    'paper_width_mm' => $lockedPrinter->paper_width_mm->value,
+                    'dots_per_line' => $lockedPrinter->paper_width_mm->dotsPerLine(),
+                    'locale' => 'vi-VN',
+                    'render_mode' => 'raster',
                 ],
                 'order' => [
                     'id' => (int) $lockedOrder->getKey(),
@@ -125,7 +135,11 @@ final class CreateKitchenPrintJob
                 ])->save();
             }
 
-            return $printJob->refresh()->load(['printer', 'order']);
+            return $printJob->refresh()->load(['printer', 'order.tableSession']);
         });
+
+        PosStateChanged::dispatch((int) $printJob->store_id, (int) $printJob->order->tableSession->table_id, 'kitchen-ticket.created');
+
+        return $printJob;
     }
 }

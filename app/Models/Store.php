@@ -77,6 +77,12 @@ class Store extends Model
         return $this->hasMany(PrintJob::class);
     }
 
+    /** Các command idempotent phát sinh tại chi nhánh. */
+    public function posCommands(): HasMany
+    {
+        return $this->hasMany(PosCommand::class);
+    }
+
     /** Các máy in được cấu hình cho chi nhánh. */
     public function printers(): HasMany
     {

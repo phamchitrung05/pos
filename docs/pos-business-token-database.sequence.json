@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "POS: nghiệp vụ, token và persistence",
+    "output": "docs/pos-business-token-database.sequence.html",
+    "viewBox": [1500, 1980],
+    "quality_profile": "showcase",
+    "column_fit": "spread"
+  },
+  "participants": [
+    { "id": "operator", "type": "external", "label": "Nhân viên" },
+    { "id": "pos", "type": "frontend", "label": "Tauri POS" },
+    { "id": "auth_api", "type": "backend", "label": "Auth API" },
+    { "id": "sanctum", "type": "security", "label": "Sanctum" },
+    { "id": "session_store", "type": "database", "label": "Session Store" },
+    { "id": "pos_api", "type": "backend", "label": "POS API" },
+    { "id": "local_db", "type": "database", "label": "Local DB" },
+    { "id": "mysql", "type": "database", "label": "Laravel DB" },
+    { "id": "actions", "type": "backend", "label": "POS Actions" },
+    { "id": "reverb", "type": "messagebus", "label": "Laravel Reverb" },
+    { "id": "print_agent", "type": "external", "label": "Print Agent" }
+  ],
+  "segments": [
+    { "from": 150, "to": 530, "label": "1. Cấp token + khôi phục phiên" },
+    { "from": 560, "to": 850, "label": "2. Bootstrap + local snapshot" },
+    { "from": 880, "to": 1300, "label": "3. Draft offline + promote outbox" },
+    { "from": 1330, "to": 1730, "label": "4. Sync transaction + realtime" },
+    { "from": 1760, "to": 1930, "label": "5. Print callback" }
+  ],
+  "messages": [
+    { "id": "login_intent", "from": "operator", "to": "pos", "y": 190, "label": "Đăng nhập cửa hàng + thiết bị", "variant": "default" },
+    { "id": "login_request", "from": "pos", "to": "auth_api", "y": 235, "label": "POST /api/login: email, password, device_id, device_name", "variant": "emphasis" },
+    { "id": "create_token", "from": "auth_api", "to": "sanctum", "y": 285, "label": "createPersonalAccessToken()", "variant": "security" },
+    { "id": "token_created", "from": "sanctum", "to": "auth_api", "y": 330, "label": "access_token + expires_at + token abilities", "variant": "return" },
+    { "id": "persist_token", "from": "auth_api", "to": "mysql", "y": 375, "label": "lưu token/device association", "variant": "dashed", "note": "Sanctum personal access token được lưu phía Laravel; thiết bị phải khớp X-Device-ID ở các request POS." },
+    { "id": "login_response", "from": "auth_api", "to": "pos", "y": 420, "label": "200 data: token, expiry, device, user/store", "variant": "return" },
+    { "id": "save_session", "from": "pos", "to": "session_store", "y": 465, "label": "persist session snapshot", "variant": "security", "note": "Lưu serverUrl, deviceId, deviceName, accessToken, expiresAt và user; không dùng cookie." },
+    { "id": "session_ready", "from": "session_store", "to": "pos", "y": 505, "label": "restore session nếu chưa hết hạn", "variant": "return" },
+    { "id": "bootstrap_request", "from": "pos", "to": "pos_api", "y": 595, "label": "GET /api/pos/bootstrap + Bearer + X-Device-ID", "variant": "emphasis" },
+    { "id": "bootstrap_read", "from": "pos_api", "to": "mysql", "y": 640, "label": "read store, catalog, printers", "variant": "default" },
+    { "id": "table_read", "from": "pos_api", "to": "mysql", "y": 685, "label": "read table/order projection", "variant": "default" },
+    { "id": "bootstrap_response", "from": "pos_api", "to": "pos", "y": 730, "label": "bootstrap + tables", "variant": "return" },
+    { "id": "save_snapshot", "from": "pos", "to": "local_db", "y": 775, "label": "saveSnapshot(store_id, bootstrap, tables)", "variant": "dashed", "note": "Cache để app vẫn hiển thị và tiếp tục tạo draft khi server tạm mất." },
+    { "id": "open_table", "from": "operator", "to": "pos", "y": 905, "label": "Chọn bàn / thêm món", "variant": "default" },
+    { "id": "draft_write", "from": "pos", "to": "local_db", "y": 950, "label": "upsert table draft trước khi gọi mạng", "variant": "emphasis", "note": "Draft chưa phải Order server; quantity/giá/notes được sửa cục bộ và ghi tuần tự." },
+    { "id": "promote_intent", "from": "operator", "to": "pos", "y": 1000, "label": "Bấm Chế biến hoặc Thanh toán", "variant": "default" },
+    { "id": "promote_transaction", "from": "pos", "to": "local_db", "y": 1045, "label": "transaction: draft -> command chain + xóa draft", "variant": "emphasis", "note": "Mỗi command có UUID; command sau giữ dependsOnCommandId để resolve order_id thật." },
+    { "id": "optimistic_projection", "from": "pos", "to": "operator", "y": 1090, "label": "applyLocalCommand(): UI optimistic", "variant": "return", "note": "Reducer thuần không gọi API; server vẫn là nguồn sự thật cuối cùng." },
+    { "id": "sync_request", "from": "pos", "to": "pos_api", "y": 1185, "label": "POST /api/pos/sync: tối đa 50 commands", "variant": "emphasis" },
+    { "id": "process_command", "from": "pos_api", "to": "actions", "y": 1230, "label": "ProcessPosCommand: validate + idempotency", "variant": "security", "note": "Kiểm tra tenant/device, trả stored result nếu command UUID đã xử lý." },
+    { "id": "action_transaction", "from": "actions", "to": "mysql", "y": 1275, "label": "DB transaction: Open/Add/Update/Kitchen/Checkout", "variant": "emphasis", "note": "Các Action khóa dữ liệu cần thiết, tính lại order và commit atomically." },
+    { "id": "create_jobs", "from": "actions", "to": "mysql", "y": 1320, "label": "payment/session/order + kitchen/receipt print jobs", "variant": "default" },
+    { "id": "changed_tables", "from": "pos_api", "to": "pos", "y": 1390, "label": "commands result + changed_tables + server_time", "variant": "return" },
+    { "id": "local_commit", "from": "pos", "to": "local_db", "y": 1435, "label": "mark command result; patch table sau cả chain", "variant": "dashed" },
+    { "id": "broadcast_event", "from": "actions", "to": "reverb", "y": 1480, "label": "afterCommit: PosStateChanged(storeId, tableId, change)", "variant": "dashed", "note": "Private stores.{storeId}.pos; event chỉ mang metadata, client fetch projection bàn." },
+    { "id": "realtime_fetch", "from": "reverb", "to": "pos", "y": 1525, "label": "other POS nhận .pos.state.changed", "variant": "return" },
+    { "id": "table_patch", "from": "pos", "to": "pos_api", "y": 1570, "label": "GET /api/pos/tables/{table}", "variant": "default" },
+    { "id": "patch_local_state", "from": "pos_api", "to": "pos", "y": 1615, "label": "patchTables(): thay đúng bàn + groups/statistics", "variant": "return" },
+    { "id": "claim_job", "from": "print_agent", "to": "pos_api", "y": 1785, "label": "claim print job + lease", "variant": "default" },
+    { "id": "claim_read", "from": "pos_api", "to": "mysql", "y": 1825, "label": "lock job + claim_token", "variant": "default" },
+    { "id": "report_printed", "from": "print_agent", "to": "pos_api", "y": 1855, "label": "PATCH result: printed/failed", "variant": "return" },
+    { "id": "persist_print_status", "from": "pos_api", "to": "mysql", "y": 1890, "label": "persist print status", "variant": "dashed" }
+  ],
+  "activations": [
+    { "participant": "pos", "from": 230, "to": 815, "type": "frontend" },
+    { "participant": "auth_api", "from": 235, "to": 425, "type": "backend" },
+    { "participant": "sanctum", "from": 280, "to": 340, "type": "security" },
+    { "participant": "pos_api", "from": 595, "to": 1625, "type": "backend" },
+    { "participant": "actions", "from": 1225, "to": 1340, "type": "backend" },
+    { "participant": "mysql", "from": 635, "to": 1960, "type": "database" },
+    { "participant": "reverb", "from": 1475, "to": 1540, "type": "messagebus" }
+  ],
+  "cards": [
+    {
+      "dot": "rose",
+      "title": "Token + security",
+      "items": [
+        "Login cấp access_token kèm expires_at và device identity",
+        "Mọi request POS gửi Bearer token và X-Device-ID",
+        "Sanctum và EnsurePosDevice chặn token dùng sai thiết bị/store"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Local-first persistence",
+      "items": [
+        "Bootstrap/table snapshot dùng làm cache khởi động và fallback offline",
+        "Draft được ghi local trước, chưa phải order server",
+        "Promote transaction ghi command chain bền vững trước optimistic UI"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Server commit + realtime",
+      "items": [
+        "ProcessPosCommand dispatch Action trong transaction và idempotency UUID",
+        "Sync chỉ patch changed_tables sau khi chain hoàn tất",
+        "Reverb phát metadata sau commit; client fetch projection bàn mới nhất"
+      ]
+    }
+  ]
+}

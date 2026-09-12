@@ -2,8 +2,10 @@
 
 namespace App\Actions\Pos;
 
+use Carbon\CarbonInterface;
 use App\Enums\OrderStatus;
 use App\Enums\TableSessionStatus;
+use App\Events\PosStateChanged;
 use App\Models\DiningTable;
 use App\Models\Order;
 use App\Models\TableSession;
@@ -20,10 +22,10 @@ final class OpenTableSession
      * cùng lúc tạo hai phiên cho một bàn. Quyền được kiểm tra bằng Laravel Gate
      * để action dùng an toàn từ cả Filament lẫn API Tauri sau này.
      */
-    public function handle(DiningTable $table, User $actor): TableSession
+    public function handle(DiningTable $table, User $actor, ?CarbonInterface $startedAt = null): TableSession
     {
         try {
-            return DB::transaction(function () use ($table, $actor): TableSession {
+            $session = DB::transaction(function () use ($table, $actor, $startedAt): TableSession {
                 /** @var DiningTable $lockedTable */
                 $lockedTable = DiningTable::query()
                     ->lockForUpdate()
@@ -50,7 +52,8 @@ final class OpenTableSession
                 $session->forceFill([
                     'store_id' => $lockedTable->store_id,
                     'table_id' => $lockedTable->getKey(),
-                    'start_time' => now(),
+                    // Client có thể giữ nháp offline; dùng mốc món đầu tiên để thời gian phục vụ không bị đặt lại lúc sync.
+                    'start_time' => $startedAt ?? now(),
                     'end_time' => null,
                     'status' => TableSessionStatus::Open,
                     'opened_by' => $actor->getKey(),
@@ -83,10 +86,19 @@ final class OpenTableSession
             if ($openSession) {
                 // Request thua cuộc đua trả về phiên vừa được thiết bị kia tạo,
                 // giúp UI tiếp tục order mà không phải hiển thị lỗi kỹ thuật.
-                return $openSession->load(['table', 'order']);
+                $session = $openSession->load(['table', 'order']);
+
+                PosStateChanged::dispatch((int) $session->store_id, (int) $session->table_id, 'session.opened');
+
+                return $session;
             }
 
             throw $exception;
         }
+
+        // Dispatch nằm sau DB::transaction nên client không thể đọc projection chưa commit.
+        PosStateChanged::dispatch((int) $session->store_id, (int) $session->table_id, 'session.opened');
+
+        return $session;
     }
 }
