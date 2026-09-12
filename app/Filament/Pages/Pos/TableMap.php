@@ -366,7 +366,7 @@ class TableMap extends Page
     {
         $query = Printer::query()
             ->where('store_id', $this->currentStore()->getKey())
-            ->where('printer_type', PrinterType::Kitchen->value)
+            ->whereIn('printer_type', [PrinterType::Kitchen->value, PrinterType::Both->value])
             ->where('is_active', true);
 
         $printer = $printerId === null

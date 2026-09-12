@@ -9,6 +9,7 @@ enum PrinterType: string implements HasLabel
 {
     case Receipt = 'receipt';
     case Kitchen = 'kitchen';
+    case Both = 'both';
     case Label = 'label';
 
     /** Nhãn tiếng Việt dùng trực tiếp bởi Select và badge của Filament. */
@@ -17,6 +18,7 @@ enum PrinterType: string implements HasLabel
         return match ($this) {
             self::Receipt => 'Hóa đơn',
             self::Kitchen => 'Bếp',
+            self::Both => 'Hóa đơn & bếp',
             self::Label => 'Tem nhãn',
         };
     }

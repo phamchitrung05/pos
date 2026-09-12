@@ -47,18 +47,69 @@ class PosPrinterApiTest extends TestCase
             'ip_address' => '192.168.1.88',
             'port' => 9100,
             'paper_width_mm' => 80,
+            'kitchen_copies' => 2,
         ]);
 
         $response
             ->assertCreated()
             ->assertJsonPath('data.name', 'Máy in quầy mới')
             ->assertJsonPath('data.type', PrinterType::Receipt->value)
+            ->assertJsonPath('data.kitchen_copies', 2)
             ->assertJsonPath('data.dots_per_line', 576);
 
         $this->assertDatabaseHas('printers', [
             'store_id' => $this->store->id,
             'ip_address' => '192.168.1.88',
             'printer_type' => PrinterType::Receipt->value,
+        ]);
+    }
+
+    public function test_pos_can_create_a_kitchen_printer_for_its_store(): void
+    {
+        $response = $this->api()->postJson(route('api.pos.printers.store'), [
+            'name' => 'Máy in bếp mới',
+            'printer_type' => PrinterType::Kitchen->value,
+            'ip_address' => '192.168.1.89',
+            'port' => 9100,
+            'paper_width_mm' => 80,
+        ]);
+
+        $response
+            ->assertCreated()
+            ->assertJsonPath('data.type', PrinterType::Kitchen->value);
+
+        $this->assertDatabaseHas('printers', [
+            'store_id' => $this->store->id,
+            'ip_address' => '192.168.1.89',
+            'printer_type' => PrinterType::Kitchen->value,
+        ]);
+    }
+
+    public function test_pos_can_update_printer_settings_and_kitchen_copies(): void
+    {
+        $printer = Printer::query()
+            ->where('store_id', $this->store->id)
+            ->where('printer_type', PrinterType::Receipt->value)
+            ->firstOrFail();
+
+        $response = $this->api()->patchJson(route('api.pos.printers.update', $printer), [
+            'name' => 'Máy in dùng chung',
+            'printer_type' => PrinterType::Both->value,
+            'ip_address' => '192.168.1.90',
+            'port' => 9100,
+            'paper_width_mm' => 80,
+            'kitchen_copies' => 2,
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.type', PrinterType::Both->value)
+            ->assertJsonPath('data.kitchen_copies', 2);
+
+        $this->assertDatabaseHas('printers', [
+            'id' => $printer->id,
+            'printer_type' => PrinterType::Both->value,
+            'kitchen_copies' => 2,
         ]);
     }
 

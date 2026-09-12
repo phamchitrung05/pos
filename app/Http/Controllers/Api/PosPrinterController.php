@@ -24,23 +24,53 @@ final class PosPrinterController extends Controller
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'printer_type' => ['sometimes', Rule::enum(PrinterType::class)],
             'ip_address' => ['required', 'ip'],
             'port' => ['required', 'integer', 'between:1,65535'],
             'paper_width_mm' => ['required', Rule::enum(PrinterPaperWidth::class)],
+            'kitchen_copies' => ['sometimes', 'integer', 'between:1,5'],
         ]);
 
         $printer = new Printer;
         $printer->forceFill([
             'store_id' => $store->getKey(),
             'name' => $validated['name'],
-            'printer_type' => PrinterType::Receipt,
+            'printer_type' => PrinterType::from($validated['printer_type'] ?? PrinterType::Receipt->value),
             'ip_address' => $validated['ip_address'],
             'port' => (int) $validated['port'],
             'paper_width_mm' => PrinterPaperWidth::from((int) $validated['paper_width_mm']),
+            'kitchen_copies' => (int) ($validated['kitchen_copies'] ?? 1),
             'is_active' => true,
         ])->save();
 
         return response()->json(['data' => $this->printerResult($printer)], 201);
+    }
+
+    public function update(Request $request, int $printer): JsonResponse
+    {
+        [$user, $store] = $this->context($request);
+        $printerModel = Printer::query()->where('store_id', $store->getKey())->findOrFail($printer);
+        Gate::forUser($user)->authorize('update', $printerModel);
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'printer_type' => ['required', Rule::enum(PrinterType::class)],
+            'ip_address' => ['required', 'ip'],
+            'port' => ['required', 'integer', 'between:1,65535'],
+            'paper_width_mm' => ['required', Rule::enum(PrinterPaperWidth::class)],
+            'kitchen_copies' => ['required', 'integer', 'between:1,5'],
+        ]);
+
+        $printerModel->forceFill([
+            'name' => $validated['name'],
+            'printer_type' => PrinterType::from($validated['printer_type']),
+            'ip_address' => $validated['ip_address'],
+            'port' => (int) $validated['port'],
+            'paper_width_mm' => PrinterPaperWidth::from((int) $validated['paper_width_mm']),
+            'kitchen_copies' => (int) $validated['kitchen_copies'],
+        ])->save();
+
+        return response()->json(['data' => $this->printerResult($printerModel->refresh())]);
     }
 
     public function testPrint(Request $request, int $printer, CreateReceiptTestPrintJob $createTestPrintJob): JsonResponse
@@ -69,6 +99,7 @@ final class PosPrinterController extends Controller
             'ip_address' => $printer->ip_address,
             'port' => $printer->port,
             'paper_width_mm' => $printer->paper_width_mm->value,
+            'kitchen_copies' => (int) $printer->kitchen_copies,
             'dots_per_line' => $printer->paper_width_mm->dotsPerLine(),
         ];
     }

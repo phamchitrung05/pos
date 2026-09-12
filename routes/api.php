@@ -24,7 +24,8 @@ Route::middleware(['auth:sanctum', 'pos.device', 'throttle:pos-api'])->prefix('p
     Route::post('commands', [PosCommandController::class, 'store'])->name('api.pos.commands.store');
     Route::post('sync', [PosCommandController::class, 'sync'])->name('api.pos.sync');
     Route::post('printers/{printer}/print-jobs/claim', [PosPrintJobController::class, 'claim'])->whereNumber('printer')->name('api.pos.print-jobs.claim');
-    Route::post('printers', [PosPrinterController::class, 'store'])->name('api.pos.printers.store');
+     Route::post('printers', [PosPrinterController::class, 'store'])->name('api.pos.printers.store');
+    Route::patch('printers/{printer}', [PosPrinterController::class, 'update'])->whereNumber('printer')->name('api.pos.printers.update');
     Route::post('printers/{printer}/test-print', [PosPrinterController::class, 'testPrint'])->whereNumber('printer')->name('api.pos.printers.test-print');
     Route::patch('print-jobs/{printJob}/result', [PosPrintJobController::class, 'updateResult'])->whereNumber('printJob')->name('api.pos.print-jobs.result');
     Route::post('print-jobs/{printJob}/retry', [PosPrintJobController::class, 'retry'])->whereNumber('printJob')->name('api.pos.print-jobs.retry');

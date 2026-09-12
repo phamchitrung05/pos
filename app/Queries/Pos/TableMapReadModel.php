@@ -120,7 +120,7 @@ final class TableMapReadModel
     {
         return Printer::query()
             ->where('store_id', $store->getKey())
-            ->where('printer_type', PrinterType::Kitchen->value)
+            ->whereIn('printer_type', [PrinterType::Kitchen->value, PrinterType::Both->value])
             ->where('is_active', true)
             ->orderBy('name')
             ->get()

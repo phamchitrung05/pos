@@ -60,7 +60,7 @@ class PrintJob extends Model
                 ? $printer->printer_type->value
                 : (string) $printer?->printer_type;
 
-            if ($printType !== $printerType) {
+            if ($printType !== $printerType && $printerType !== PrinterType::Both->value) {
                 throw ValidationException::withMessages([
                     'print_type' => 'Loại nội dung phải khớp với loại máy in nhận lệnh.',
                 ]);

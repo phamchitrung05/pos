@@ -24,6 +24,7 @@ class PrinterForm
                 TextInput::make('ip_address')->label('Địa chỉ IP')->ip()->required(),
                 TextInput::make('port')->label('Cổng kết nối')->numeric()->integer()->minValue(1)->maxValue(65535)->required(),
                 Select::make('paper_width_mm')->label('Khổ giấy')->options(PrinterPaperWidth::class)->required()->default(PrinterPaperWidth::Mm80->value),
+                TextInput::make('kitchen_copies')->label('Số bản phiếu bếp')->numeric()->integer()->minValue(1)->maxValue(5)->required()->default(1),
                 Toggle::make('is_active')->label('Đang sử dụng')->default(true),
             ]);
     }

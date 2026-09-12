@@ -53,6 +53,7 @@ final class PosApiReadModel
                     'ip_address' => $printer->ip_address,
                     'port' => $printer->port,
                     'paper_width_mm' => $printer->paper_width_mm->value,
+                    'kitchen_copies' => (int) $printer->kitchen_copies,
                     'dots_per_line' => $printer->paper_width_mm->dotsPerLine(),
                 ])
                 ->values()

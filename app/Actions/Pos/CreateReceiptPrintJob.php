@@ -49,7 +49,7 @@ final class CreateReceiptPrintJob
                 || ! $lockedPrinter->is_active
                 || blank($lockedPrinter->ip_address)
                 || ! $lockedPrinter->port
-                || $lockedPrinter->printer_type !== PrinterType::Receipt) {
+                || ! in_array($lockedPrinter->printer_type, [PrinterType::Receipt, PrinterType::Both], true)) {
                 throw ValidationException::withMessages(['printer_id' => 'Máy in hóa đơn không hợp lệ cho cửa hàng này.']);
             }
 

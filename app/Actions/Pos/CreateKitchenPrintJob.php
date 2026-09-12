@@ -59,7 +59,7 @@ final class CreateKitchenPrintJob
             if (! $lockedPrinter->is_active
                 || blank($lockedPrinter->ip_address)
                 || ! $lockedPrinter->port
-                || $lockedPrinter->printer_type !== PrinterType::Kitchen) {
+                || ! in_array($lockedPrinter->printer_type, [PrinterType::Kitchen, PrinterType::Both], true)) {
                 throw ValidationException::withMessages([
                     'printer_id' => 'Máy in được chọn không phải máy in bếp đang hoạt động.',
                 ]);

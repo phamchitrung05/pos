@@ -17,7 +17,7 @@ class Printer extends Model
 {
     use AssignsCurrentStore, HasFactory;
 
-    protected $fillable = ['store_id', 'name', 'printer_type', 'ip_address', 'port', 'paper_width_mm', 'is_active'];
+    protected $fillable = ['store_id', 'name', 'printer_type', 'ip_address', 'port', 'paper_width_mm', 'kitchen_copies', 'is_active'];
 
     /** Hash và gợi ý token không bao giờ được serialize cùng cấu hình máy in. */
     protected $hidden = ['api_token_hash'];
@@ -46,6 +46,7 @@ class Printer extends Model
             'printer_type' => PrinterType::class,
             'port' => 'integer',
             'paper_width_mm' => PrinterPaperWidth::class,
+            'kitchen_copies' => 'integer',
             'is_active' => 'boolean',
         ];
     }

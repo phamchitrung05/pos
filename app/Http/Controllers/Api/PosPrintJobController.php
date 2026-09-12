@@ -46,6 +46,7 @@ final class PosPrintJobController extends Controller
                     'ip_address' => $printerModel->ip_address,
                     'port' => $printerModel->port,
                     'paper_width_mm' => $printerModel->paper_width_mm->value,
+                    'kitchen_copies' => (int) $printerModel->kitchen_copies,
                     'dots_per_line' => $printerModel->paper_width_mm->dotsPerLine(),
                 ],
                 'payload' => $job->payload,
