@@ -15,7 +15,7 @@ class OrdersTable
     {
         return $table
             ->columns([
-                TextColumn::make('id')->label('Mã đơn')->sortable(),
+                TextColumn::make('code')->label('Mã đơn')->searchable()->sortable(),
                 TextColumn::make('tableSession.table.name')->label('Bàn')->sortable(),
                 TextColumn::make('status')->label('Trạng thái')->badge(),
                 TextColumn::make('total')->label('Tổng tiền')->money('VND')->sortable(),
