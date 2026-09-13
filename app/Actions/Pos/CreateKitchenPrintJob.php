@@ -95,7 +95,7 @@ final class CreateKitchenPrintJob
                     'paper_width_mm' => $lockedPrinter->paper_width_mm->value,
                     'dots_per_line' => $lockedPrinter->paper_width_mm->dotsPerLine(),
                     'locale' => 'vi-VN',
-                    'render_mode' => 'raster',
+                        'render_mode' => 'raw',
                 ],
                 'order' => [
                     'id' => (int) $lockedOrder->getKey(),

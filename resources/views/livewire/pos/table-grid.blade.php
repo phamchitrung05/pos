@@ -1,174 +1,185 @@
 @php
     // Các phép tính trình bày không làm thay đổi read model hoặc state Livewire.
     $statistics = $tableMap['statistics'];
-    $emptyPercent = $statistics['total'] > 0 ? round($statistics['empty'] * 100 / $statistics['total']) : 0;
     $occupiedPercent = $statistics['total'] > 0 ? round($statistics['occupied'] * 100 / $statistics['total']) : 0;
+    $emptyPercent = $statistics['total'] > 0 ? round($statistics['empty'] * 100 / $statistics['total']) : 0;
+    $revenueLabel = number_format((float) ($statistics['revenue'] ?? 0), 0, ',', '.').' đ';
 @endphp
 
-<div wire:poll.60s="refreshGrid" class="h-[80vh] flex min-h-0 flex-col overflow-hidden">
-    {{-- =====================================================
-    | THỐNG KÊ
-    ====================================================== --}}
-    <div class="grid shrink-0 grid-flow-col auto-cols-[220px] gap-3 overflow-x-auto pb-1 md:grid-flow-row md:grid-cols-3 md:overflow-visible md:pb-0">
-        <div class="flex min-h-[112px] items-center gap-5 rounded-2xl border border-emerald-100 bg-emerald-50/60 px-5">
-            <div class="flex size-16 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-                <svg class="size-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 9h14v4H5V9Zm2 4v6m10-6v6M7 9V6h10v3" />
-                </svg>
-            </div>
-            <div>
-                <div class="text-[28px] font-bold leading-none text-slate-950">{{ $statistics['empty'] }}</div>
-                <div class="mt-2 text-[15px] text-slate-600">Bàn trống</div>
-                <div class="mt-0.5 text-[14px] font-semibold text-emerald-600">({{ $emptyPercent }}%)</div>
-            </div>
-        </div>
+<div wire:poll.60s="refreshGrid" class="h-[calc(100dvh-9rem)] bg-[#fbfaf8] text-[#101a33] overflow-hidden">
+    <div class="flex min-h-full">
+        <main class="min-w-0 flex-1">
+            <div class="h-dvh">
+                <header class="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+                    <div>
+                        <h1 class="text-[32px] font-bold tracking-[-0.035em] text-slate-950">Sơ đồ bàn</h1>
+                        <p class="mt-1 text-[15px] text-slate-500">Quản lý trạng thái bàn theo thời gian thực</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-4 pt-2 text-[14px] text-slate-500 sm:gap-6">
+                        <div class="flex items-center gap-2 font-medium text-emerald-600"><span
+                                class="size-2.5 rounded-full bg-emerald-500"></span>Đang hoạt động
+                        </div>
+                        <span class="hidden h-5 w-px bg-slate-200 sm:block"></span>
+                        <div>{{ now()->translatedFormat('l, d/m/Y') }}</div>
+                        <div>{{ now()->format('H:i') }}</div>
+                        <button type="button"
+                                class="relative flex size-10 items-center justify-center rounded-xl text-slate-700 hover:bg-white"
+                                aria-label="Thông báo"><span class="text-xl">♧</span><span
+                                class="absolute right-1.5 top-1.5 size-2 rounded-full bg-orange-500"></span></button>
+                    </div>
+                </header>
 
-        <div class="flex min-h-[112px] items-center gap-5 rounded-2xl border border-emerald-100 bg-emerald-50 px-5">
-            <div class="flex size-16 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-                <svg class="size-9" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm8-1a3 3 0 1 0 0-6M22 21v-2a4 4 0 0 0-3-3.87" />
-                </svg>
-            </div>
-            <div>
-                <div class="text-[28px] font-bold leading-none text-slate-950">{{ $statistics['occupied'] }}</div>
-                <div class="mt-2 text-[15px] text-slate-600">Có khách</div>
-                <div class="mt-0.5 text-[14px] font-semibold text-emerald-600">({{ $occupiedPercent }}%)</div>
-            </div>
-        </div>
-
-        <div class="flex min-h-[112px] items-center gap-5 rounded-2xl border border-slate-200 bg-white px-5">
-            <div class="flex size-16 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500">
-                <svg class="size-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 9h14v4H5V9Zm2 4v6m10-6v6M7 9V6h10v3" />
-                </svg>
-            </div>
-            <div>
-                <div class="text-[28px] font-bold leading-none text-slate-950">{{ $statistics['total'] }}</div>
-                <div class="mt-2 text-[15px] text-slate-600">Tổng số bàn</div>
-            </div>
-        </div>
-    </div>
-
-    {{-- =====================================================
-    | BỘ LỌC KHU VỰC VÀ TÌM KIẾM
-    ====================================================== --}}
-    <div class="mt-5 flex shrink-0 flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-        <div class="flex items-center gap-2 overflow-x-auto pb-1 xl:flex-wrap xl:overflow-visible xl:pb-0">
-            <button
-                type="button"
-                wire:click="$set('zoneFilter', 'all')"
-                @class([
-                    'h-10 shrink-0 rounded-xl border px-5 text-sm font-semibold transition',
-                    'border-blue-600 bg-blue-600 text-white shadow-sm' => $zoneFilter === 'all',
-                    'border-slate-200 bg-white text-slate-600 hover:bg-slate-50' => $zoneFilter !== 'all',
-                ])
-            >
-                Tất cả ({{ $statistics['total'] }})
-            </button>
-
-            @foreach ($tableMap['zones'] as $zone)
-                <button
-                    type="button"
-                    wire:key="zone-filter-{{ $zone['id'] }}"
-                    wire:click="$set('zoneFilter', '{{ $zone['id'] }}')"
-                    @class([
-                        'h-10 shrink-0 rounded-xl border px-5 text-sm font-semibold transition',
-                        'border-blue-600 bg-blue-600 text-white shadow-sm' => $zoneFilter === (string) $zone['id'],
-                        'border-slate-200 bg-white text-slate-600 hover:bg-slate-50' => $zoneFilter !== (string) $zone['id'],
-                    ])
-                >
-                    {{ $zone['name'] }} ({{ $zone['tableCount'] }})
-                </button>
-            @endforeach
-        </div>
-
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-
-            <div class="flex items-center gap-5 whitespace-nowrap text-sm text-slate-500">
-                <div class="flex items-center gap-2">
-                    <span class="size-4 rounded-full border-2 border-slate-200 bg-white"></span>
-                    Trống
-                </div>
-                <div class="flex items-center gap-2">
-                    <span class="size-4 rounded-full bg-emerald-500 ring-4 ring-emerald-100"></span>
-                    Có khách
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {{-- =====================================================
-    | DANH SÁCH BÀN THEO KHU VỰC
-    ====================================================== --}}
-    <div class="mt-5 min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain pe-1 scroll-none" wire:loading.class="opacity-60">
-        @forelse ($tableMap['groups'] as $group)
-            <section wire:key="zone-{{ $group['id'] }}" class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-                <div class="flex h-11 items-center border-b border-slate-200 bg-slate-50/80 px-4">
-                    <h2 class="text-[16px] font-bold text-slate-900">
-                        {{ $group['name'] }}
-                        <span class="font-medium text-slate-500">({{ count($group['tables']) }} bàn)</span>
-                    </h2>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3 p-3 sm:grid-cols-4 xl:grid-cols-8">
-                    @foreach ($group['tables'] as $table)
-                        <button
-                            type="button"
-                            wire:key="table-{{ $table['id'] }}"
-                            wire:click="$parent.selectTable({{ $table['id'] }})"
-                            x-on:click="
-                                $dispatch('table-modal-loading', {
-                                    name: @js($table['name']),
-                                    zone: @js($table['zone']['name']),
-                                });
-                                $dispatch('open-modal', { id: 'table-details' });
-                            "
-                            @class([
-                                'group relative aspect-square min-h-[130px] overflow-hidden rounded-xl border transition-all duration-200',
-                                'border-blue-500 ring-2 ring-blue-100' => $selectedTableId === $table['id'],
-                                'border-emerald-200 bg-emerald-50 hover:border-emerald-300' => $table['status'] === 'occupied' && $selectedTableId !== $table['id'],
-                                'border-slate-200 bg-white hover:border-blue-200 hover:bg-slate-50' => $table['status'] === 'empty' && $selectedTableId !== $table['id'],
-                            ])
-                        >
-                            <div class="flex size-full flex-col items-center justify-center px-2 text-center">
-                                @if ($table['status'] === 'occupied')
-                                    <div class="mb-2 text-emerald-600">
-                                        <svg class="size-9" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M8 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm8.5-1a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM8 13c-4.42 0-8 2.24-8 5v2h12v-2c0-1.27.5-2.42 1.37-3.4C11.94 13.58 10.08 13 8 13Zm8.5-1c-1.44 0-2.78.35-3.87.95A6.6 6.6 0 0 1 15 18v2h9v-2c0-3.31-3.36-6-7.5-6Z" />
-                                        </svg>
-                                    </div>
-                                @else
-                                    <div class="mb-2 text-emerald-500">
-                                        <svg class="size-9" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M5 9h14v4H5V9Zm2 4v6m10-6v6M7 9V6h10v3" />
-                                        </svg>
-                                    </div>
-                                @endif
-
-                                <div class="text-[17px] font-bold leading-none text-slate-950">{{ $table['name'] }}</div>
-
-                                @if ($table['status'] === 'occupied')
-                                    <div class="mt-2 text-[13px] font-medium text-slate-600">{{ $table['session']['elapsedLabel'] }}</div>
-                                    <div class="mt-1 text-[13px] font-semibold text-slate-800">{{ $table['order']['totalLabel'] }}</div>
-                                @else
-                                    <div class="mt-2 text-[13px] font-medium text-slate-500">Trống</div>
-                                @endif
+                <section class="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    <div
+                        class="flex min-h-[106px] items-center rounded-2xl border border-orange-100/60 bg-white px-5 shadow-[0_4px_18px_rgba(15,23,42,0.035)]">
+                        <div
+                            class="mr-5 flex size-14 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-2xl text-orange-500">
+                            ▦
+                        </div>
+                        <div>
+                            <div class="text-sm text-slate-500">Tổng bàn</div>
+                            <div class="mt-1 flex items-end gap-2"><span
+                                    class="text-[28px] font-bold leading-none text-slate-950">{{ $statistics['total'] }}</span><span
+                                    class="pb-0.5 text-sm text-slate-500">bàn</span></div>
+                        </div>
+                    </div>
+                    <div
+                        class="flex min-h-[106px] items-center rounded-2xl border border-orange-100/60 bg-white px-5 shadow-[0_4px_18px_rgba(15,23,42,0.035)]">
+                        <div
+                            class="mr-5 flex size-14 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-2xl text-orange-500">
+                            ♙
+                        </div>
+                        <div class="flex-1">
+                            <div class="text-sm text-slate-500">Đang phục vụ</div>
+                            <div class="mt-1 flex items-end gap-2"><span
+                                    class="text-[28px] font-bold leading-none text-slate-950">{{ $statistics['occupied'] }}</span><span
+                                    class="pb-0.5 text-sm text-slate-500">bàn</span></div>
+                        </div>
+                        <div class="relative size-14">
+                            <svg viewBox="0 0 42 42" class="size-full -rotate-90">
+                                <circle cx="21" cy="21" r="16" fill="none" stroke="#f1f1f1" stroke-width="4"/>
+                                <circle cx="21" cy="21" r="16" fill="none" stroke="#ff6716" stroke-width="4"
+                                        stroke-linecap="round" stroke-dasharray="{{ $occupiedPercent }} 100"/>
+                            </svg>
+                            <div
+                                class="absolute inset-0 flex items-center justify-center text-xs font-semibold text-slate-600">{{ $occupiedPercent }}
+                                %
                             </div>
+                        </div>
+                    </div>
+                    <div
+                        class="flex min-h-[106px] items-center rounded-2xl border border-orange-100/60 bg-white px-5 shadow-[0_4px_18px_rgba(15,23,42,0.035)]">
+                        <div
+                            class="mr-5 flex size-14 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-2xl text-orange-500">
+                            ▦
+                        </div>
+                        <div class="flex-1">
+                            <div class="text-sm text-slate-500">Bàn trống</div>
+                            <div class="mt-1 flex items-end gap-2"><span
+                                    class="text-[28px] font-bold leading-none text-slate-950">{{ $statistics['empty'] }}</span><span
+                                    class="pb-0.5 text-sm text-slate-500">bàn</span></div>
+                        </div>
+                        <div class="relative size-14">
+                            <svg viewBox="0 0 42 42" class="size-full -rotate-90">
+                                <circle cx="21" cy="21" r="16" fill="none" stroke="#f1f1f1" stroke-width="4"/>
+                                <circle cx="21" cy="21" r="16" fill="none" stroke="#ff6716" stroke-width="4"
+                                        stroke-linecap="round" stroke-dasharray="{{ $emptyPercent }} 100"/>
+                            </svg>
+                            <div
+                                class="absolute inset-0 flex items-center justify-center text-xs font-semibold text-slate-600">{{ $emptyPercent }}
+                                %
+                            </div>
+                        </div>
+                    </div>
+                    <div
+                        class="flex min-h-[106px] items-center rounded-2xl border border-orange-100/60 bg-white px-5 shadow-[0_4px_18px_rgba(15,23,42,0.035)]">
+                        <div
+                            class="mr-5 flex size-14 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-2xl text-orange-500">
+                            ¢
+                        </div>
+                        <div class="flex-1">
+                            <div class="text-sm text-slate-500">Doanh thu tạm tính</div>
+                            <div
+                                class="mt-1 text-[25px] font-bold leading-none text-slate-950">{{ $revenueLabel }}</div>
+                        </div>
+                        <div class="flex h-12 items-end gap-1 text-orange-300"><span
+                                class="h-4 w-1.5 rounded-full bg-current"></span><span
+                                class="h-7 w-1.5 rounded-full bg-current"></span><span
+                                class="h-9 w-1.5 rounded-full bg-current"></span><span
+                                class="h-12 w-1.5 rounded-full bg-current"></span></div>
+                    </div>
+                </section>
 
-                            {{-- Ring hover không nhận pointer event để click luôn đến button bàn. --}}
-                            <div @class([
-                                'pointer-events-none absolute inset-0 rounded-xl ring-inset transition',
-                                'group-hover:ring-2 group-hover:ring-emerald-300' => $table['status'] === 'occupied',
-                                'group-hover:ring-2 group-hover:ring-blue-200' => $table['status'] === 'empty',
-                            ])></div>
+                <section
+                    class="mb-4 flex flex-col gap-4 rounded-2xl border border-orange-100/60 bg-white p-4 shadow-[0_4px_18px_rgba(15,23,42,0.035)] xl:flex-row xl:items-center xl:justify-between">
+                    <div class="flex flex-wrap gap-3">
+                        <button type="button"
+                                wire:click="$set('zoneFilter', 'all')" @class(['h-11 rounded-xl border px-6 text-sm font-medium transition', 'border-orange-500 bg-orange-500 text-white hover:bg-orange-500' => $zoneFilter === 'all', 'border-slate-200 bg-white text-slate-700 hover:border-orange-300 hover:bg-orange-50' => $zoneFilter !== 'all'])>
+                            Tất cả ({{ $statistics['total'] }})
                         </button>
-                    @endforeach
+                        @foreach ($tableMap['zones'] as $zone)
+                            <button type="button" wire:key="zone-filter-{{ $zone['id'] }}"
+                                    wire:click="$set('zoneFilter', '{{ $zone['id'] }}')" @class(['h-11 rounded-xl border px-6 text-sm font-medium transition', 'border-orange-500 bg-orange-500 text-white hover:bg-orange-500' => $zoneFilter === (string) $zone['id'], 'border-slate-200 bg-white text-slate-700 hover:border-orange-300 hover:bg-orange-50' => $zoneFilter !== (string) $zone['id']])>{{ $zone['name'] }}
+                                ({{ $zone['tableCount'] }})
+                            </button>
+                        @endforeach
+                    </div>
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                        <button type="button" wire:click="refreshGrid" wire:loading.attr="disabled"
+                                class="flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60">
+                            <svg class="size-[18px]" wire:loading.class="animate-spin" fill="none" viewBox="0 0 24 24"
+                                 stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                      d="M20 11a8 8 0 0 0-14.9-4M4 5v4h4M4 13a8 8 0 0 0 14.9 4M20 19v-4h-4"/>
+                            </svg>
+                            Làm mới
+                        </button>
+                    </div>
+                </section>
+                <div class="h-[calc(100dvh-30rem)] overflow-auto scroll-none">
+                    <section wire:loading.class="opacity-60">
+                        @forelse ($tableMap['groups'] as $group)
+                            <section
+                                class="mb-4 rounded-2xl border border-orange-100/60 bg-white px-4 py-5 shadow-[0_4px_20px_rgba(15,23,42,0.035)] sm:px-6">
+                                <div wire:key="zone-group-{{ $group['id'] }}">
+                                    <div class="mb-4 flex items-center justify-between">
+                                        <div class="flex items-center gap-3">
+                                            <div class="h-7 w-[6px] rounded-full bg-orange-500"></div>
+                                            <h2 class="text-[22px] font-bold text-slate-950">{{ $group['name'] }}</h2>
+                                        </div>
+                                        <span class="text-sm text-slate-500">{{ count($group['tables']) }} bàn</span>
+                                    </div>
+                                    <div
+                                        class="grid grid-cols-2 justify-items-center gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                                        @foreach ($group['tables'] as $table)
+                                            @php($isOccupied = $table['status'] === 'occupied')
+                                            <button type="button" wire:key="table-{{ $table['id'] }}"
+                                                    wire:click="$parent.selectTable({{ $table['id'] }})"
+                                                    x-on:click="$dispatch('table-modal-loading', { name: @js($table['name']), zone: @js($table['zone']['name']) }); $dispatch('open-modal', { id: 'table-details' });" @class(['group flex aspect-square w-full cursor-pointer flex-col items-center justify-center rounded-xl border text-center transition duration-200 hover:-translate-y-0.5 hover:shadow-md', 'border-orange-500 bg-gradient-to-br from-[#ff791f] to-[#ff6413] text-white shadow-sm hover:border-orange-500' => $isOccupied, 'border-slate-200 bg-white text-slate-950 hover:border-orange-200' => ! $isOccupied, 'ring-2 ring-orange-200' => $selectedTableId === $table['id']])>
+                                                <div
+                                                    class="text-[31px] font-bold leading-none tracking-[-0.03em]">{{ $table['name'] }}</div>
+                                                <div @class(['my-2 h-px w-[70%]', 'bg-white/25' => $isOccupied, 'bg-slate-100' => ! $isOccupied])></div>@if ($isOccupied)
+                                                    <div
+                                                        class="text-[14px] font-medium">{{ $table['session']['elapsedLabel'] }}</div>
+                                                    <div
+                                                        class="mt-1 text-[17px] font-bold">{{ $table['order']['totalLabel'] }}</div>
+                                                @else
+                                                    <div class="text-[15px] text-slate-500">Trống</div>
+                                                @endif
+                                            </button>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            </section>
+                        @empty
+                            <div
+                                class="rounded-xl border border-dashed border-slate-300 px-6 py-14 text-center text-slate-500">
+                                Không tìm thấy bàn phù hợp với bộ lọc.
+                            </div>
+                        @endforelse
+                    </section>
                 </div>
-            </section>
-        @empty
-            <div class="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center text-slate-500">
-                Không tìm thấy bàn phù hợp với bộ lọc.
             </div>
-        @endforelse
+        </main>
     </div>
 </div>

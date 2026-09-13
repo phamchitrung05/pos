@@ -151,7 +151,7 @@ class PosWorkflowActionsTest extends TestCase
         $this->assertSame(2, $firstJob->payload['items'][0]['quantity']);
         $this->assertSame(80, $firstJob->payload['document']['paper_width_mm']);
         $this->assertSame(576, $firstJob->payload['document']['dots_per_line']);
-        $this->assertSame('raster', $firstJob->payload['document']['render_mode']);
+        $this->assertSame('raw', $firstJob->payload['document']['render_mode']);
         $this->assertSame(2, $order->items->first()->refresh()->kitchen_printed_quantity);
 
         // Tăng thêm một món trên dòng đã in; snapshot thứ hai chỉ được chứa phần chênh lệch là một.
@@ -301,6 +301,7 @@ class PosWorkflowActionsTest extends TestCase
         $this->assertSame(80, $firstJob->payload['document']['paper_width_mm']);
         $this->assertSame(576, $firstJob->payload['document']['dots_per_line']);
         $this->assertSame('vi-VN', $firstJob->payload['document']['locale']);
+        $this->assertSame('raw', $firstJob->payload['document']['render_mode']);
         $this->assertSame((int) $payment->amount, $firstJob->payload['payment']['amount']);
         $this->assertSame($product->name, $firstJob->payload['order']['items'][0]['name']);
     }

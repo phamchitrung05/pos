@@ -68,6 +68,7 @@ final class TableMapReadModel
                 'total' => $allTables->count(),
                 'occupied' => $allTables->where('status', 'occupied')->count(),
                 'empty' => $allTables->where('status', 'empty')->count(),
+                'revenue' => $allTables->sum(fn (array $table): float => (float) ($table['order']['total'] ?? 0)),
             ],
             'refreshedAt' => now()->toIso8601String(),
         ];

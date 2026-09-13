@@ -25,7 +25,7 @@ final class ReceiptTestPrintTemplate
                 'paper_width_mm' => $printer->paper_width_mm->value,
                 'dots_per_line' => $printer->paper_width_mm->dotsPerLine(),
                 'locale' => 'vi-VN',
-                'render_mode' => 'raster',
+                 'render_mode' => 'raw',
             ],
             'order' => [
                 'id' => 0,
