@@ -42,6 +42,10 @@ html.fi textarea {
     --modal-max-h: 960px;
 }
 
+.order-view-modal-window.s950 {
+    --modal-max-h: 950px;
+}
+
 .order-view-modal-window.s735{
     --modal-max-h: 735px;
 }
