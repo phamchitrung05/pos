@@ -2,7 +2,6 @@
 
 namespace App\Actions\Pos;
 
-use Carbon\CarbonInterface;
 use App\Enums\OrderStatus;
 use App\Enums\TableSessionStatus;
 use App\Events\PosStateChanged;
@@ -10,6 +9,8 @@ use App\Models\DiningTable;
 use App\Models\Order;
 use App\Models\TableSession;
 use App\Models\User;
+use App\Services\Pos\PosActivityLogger;
+use Carbon\CarbonInterface;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -17,6 +18,8 @@ use Illuminate\Support\Facades\Gate;
 /** Mở một phiên phục vụ và order rỗng cho bàn trong cùng một transaction. */
 final class OpenTableSession
 {
+    public function __construct(private readonly PosActivityLogger $activityLogger) {}
+
     /**
      * Khóa dòng bàn trước khi kiểm tra phiên đang mở để hai thiết bị không thể
      * cùng lúc tạo hai phiên cho một bàn. Quyền được kiểm tra bằng Laravel Gate
@@ -71,6 +74,7 @@ final class OpenTableSession
                     'created_by' => $actor->getKey(),
                 ]);
                 $order->save();
+                $this->activityLogger->sessionOpened($session, $actor);
 
                 return $session->refresh()->load(['table', 'order']);
             });

@@ -13,6 +13,7 @@ use App\Models\OrderItem;
 use App\Models\Printer;
 use App\Models\PrintJob;
 use App\Models\User;
+use App\Services\Pos\PosActivityLogger;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -21,6 +22,8 @@ use Illuminate\Validation\ValidationException;
 /** Tạo snapshot phiếu bếp chỉ gồm số lượng món chưa từng được gửi đi. */
 final class CreateKitchenPrintJob
 {
+    public function __construct(private readonly PosActivityLogger $activityLogger) {}
+
     /**
      * Việc tạo payload và cập nhật `kitchen_printed_quantity` nằm trong cùng
      * transaction. Nếu một bước thất bại, cả hai cùng rollback nên hệ thống
@@ -95,7 +98,7 @@ final class CreateKitchenPrintJob
                     'paper_width_mm' => $lockedPrinter->paper_width_mm->value,
                     'dots_per_line' => $lockedPrinter->paper_width_mm->dotsPerLine(),
                     'locale' => 'vi-VN',
-                        'render_mode' => 'raw',
+                    'render_mode' => 'raw',
                 ],
                 'order' => [
                     'id' => (int) $lockedOrder->getKey(),
@@ -134,6 +137,8 @@ final class CreateKitchenPrintJob
                     'kitchen_printed_quantity' => $item->quantity,
                 ])->save();
             }
+
+            $this->activityLogger->kitchenTicketCreated($printJob, $actor);
 
             return $printJob->refresh()->load(['printer', 'order.tableSession']);
         });

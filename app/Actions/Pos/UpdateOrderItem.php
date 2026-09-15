@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\TableSession;
 use App\Models\User;
+use App\Services\Pos\PosActivityLogger;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
@@ -17,7 +18,10 @@ use Illuminate\Validation\ValidationException;
 /** Cập nhật số lượng, ghi chú hoặc giá snapshot của một dòng món. */
 final class UpdateOrderItem
 {
-    public function __construct(private readonly RecalculateOrderTotal $recalculateOrderTotal) {}
+    public function __construct(
+        private readonly RecalculateOrderTotal $recalculateOrderTotal,
+        private readonly PosActivityLogger $activityLogger,
+    ) {}
 
     /**
      * Món đã gửi bếp vẫn được giảm số lượng vì khách có thể phản hồi món bị nhập
@@ -30,8 +34,7 @@ final class UpdateOrderItem
         int $quantity,
         ?string $notes = null,
         ?int $unitPrice = null,
-    ): OrderItem
-    {
+    ): OrderItem {
         $validated = Validator::make(
             ['quantity' => $quantity, 'notes' => $notes, 'unit_price' => $unitPrice],
             [
@@ -79,6 +82,7 @@ final class UpdateOrderItem
                 : null;
 
             if ((int) $validated['quantity'] === 0) {
+                $this->activityLogger->itemDeleted($lockedItem, $actor);
                 $lockedItem->delete();
                 $updatedOrder = $this->recalculateOrderTotal->handle($lockedOrder);
 
@@ -93,6 +97,7 @@ final class UpdateOrderItem
                         'end_time' => now(),
                         'closed_by' => $actor->getKey(),
                     ])->save();
+                    $this->activityLogger->sessionClosed($lockedSession, $actor);
                     $updatedOrder->setRelation('tableSession', $lockedSession);
                 } else {
                     $updatedOrder->load('tableSession');
@@ -116,7 +121,21 @@ final class UpdateOrderItem
             if ($validated['unit_price'] !== null) {
                 $changes['unit_price'] = (int) $validated['unit_price'];
             }
+            $oldValues = [
+                'quantity' => (int) $lockedItem->quantity,
+                'notes' => $lockedItem->notes,
+                'unit_price' => (float) $lockedItem->unit_price,
+            ];
             $lockedItem->forceFill($changes)->save();
+            $newValues = [
+                'quantity' => (int) $lockedItem->quantity,
+                'notes' => $lockedItem->notes,
+                'unit_price' => (float) $lockedItem->unit_price,
+            ];
+
+            if ($oldValues !== $newValues) {
+                $this->activityLogger->itemUpdated($lockedItem, $actor, $oldValues, $newValues);
+            }
 
             $this->recalculateOrderTotal->handle($lockedOrder);
 

@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\User;
+use App\Services\Pos\PosActivityLogger;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -18,7 +19,10 @@ use Illuminate\Validation\ValidationException;
 /** Thêm một hoặc nhiều món vào order đang phục vụ và tính lại tổng tiền. */
 final class AddOrderItems
 {
-    public function __construct(private readonly RecalculateOrderTotal $recalculateOrderTotal) {}
+    public function __construct(
+        private readonly RecalculateOrderTotal $recalculateOrderTotal,
+        private readonly PosActivityLogger $activityLogger,
+    ) {}
 
     /**
      * @param  array<int, array{product_id: int, quantity: int, notes?: string|null, unit_price?: int}>  $items
@@ -112,6 +116,7 @@ final class AddOrderItems
                         $changes['unit_price'] = (int) $itemData['unit_price'];
                     }
                     $existingItem->forceFill($changes)->save();
+                    $this->activityLogger->itemAdded($existingItem, $actor, (int) $itemData['quantity']);
 
                     continue;
                 }
@@ -129,6 +134,7 @@ final class AddOrderItems
                     'notes' => $notes,
                 ]);
                 $newItem->save();
+                $this->activityLogger->itemAdded($newItem, $actor, (int) $itemData['quantity']);
             }
 
             return $this->recalculateOrderTotal

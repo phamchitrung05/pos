@@ -2,11 +2,20 @@
 
 namespace App\Filament\Resources\TableSessions\Tables;
 
+use App\Enums\TableSessionStatus;
+use App\Models\TableSession;
+use App\Queries\Pos\TableSessionActivityReadModel;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
+use Filament\Forms\Components\DatePicker;
+use Filament\Support\Enums\IconSize;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class TableSessionsTable
 {
@@ -20,11 +29,48 @@ class TableSessionsTable
                 TextColumn::make('start_time')->label('Bắt đầu')->dateTime('d/m/Y H:i')->sortable(),
                 TextColumn::make('end_time')->label('Kết thúc')->dateTime('d/m/Y H:i')->placeholder('Đang mở'),
             ])
+            ->defaultSort('created_at', 'desc')
             ->filters([
-                //
+                SelectFilter::make('status')
+                    ->label('Trạng thái')
+                    ->options(TableSessionStatus::class)
+                    ->native(false),
+                SelectFilter::make('table')
+                    ->label('Bàn')
+                    ->relationship('table', 'name')
+                    ->native(false),
+                Filter::make('start_time')
+                    ->label('Khoảng ngày bắt đầu')
+                    ->form([
+                        DatePicker::make('from')->label('Từ ngày'),
+                        DatePicker::make('until')->label('Đến ngày'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when($data['from'] ?? null, fn (Builder $query, string $date): Builder => $query->whereDate('start_time', '>=', $date))
+                            ->when($data['until'] ?? null, fn (Builder $query, string $date): Builder => $query->whereDate('start_time', '<=', $date));
+                    }),
             ])
             ->recordActions([
-                EditAction::make(),
+                Action::make('view')
+                    ->label('')
+                    ->tooltip('Xem chi tiết')
+                    ->icon(Heroicon::OutlinedEye)
+                    ->iconSize(IconSize::Small)
+                    ->color('primary')
+                    ->modalHeading('')
+                    ->modalWidth('7xl')
+                    ->modalContent(function (TableSession $record) {
+                        $record->load(['table.zone', 'openedBy', 'order.items', 'order.payments']);
+                        $events = app(TableSessionActivityReadModel::class)->for($record);
+
+                        return view('filament.resources.table-sessions.view-modal', [
+                            'record' => $record,
+                            'events' => $events,
+                        ]);
+                    })
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Đóng'),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

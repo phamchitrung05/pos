@@ -11,6 +11,7 @@ use App\Models\Order;
 use App\Models\Payment;
 use App\Models\TableSession;
 use App\Models\User;
+use App\Services\Pos\PosActivityLogger;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -20,7 +21,10 @@ use Illuminate\Validation\ValidationException;
 /** Ghi nhận thanh toán và đóng order cùng phiên bàn một cách nguyên tử. */
 final class CheckoutTable
 {
-    public function __construct(private readonly RecalculateOrderTotal $recalculateOrderTotal) {}
+    public function __construct(
+        private readonly RecalculateOrderTotal $recalculateOrderTotal,
+        private readonly PosActivityLogger $activityLogger,
+    ) {}
 
     /**
      * `clientRequestId` là UUID do client giữ lại khi retry. Nếu request đầu đã
@@ -122,6 +126,9 @@ final class CheckoutTable
                     'end_time' => now(),
                     'closed_by' => $actor->getKey(),
                 ])->save();
+
+                $this->activityLogger->paymentCompleted($payment, $actor);
+                $this->activityLogger->sessionClosed($lockedSession, $actor);
 
                 return $payment->refresh()->load(['order.tableSession', 'receivedBy']);
             });
