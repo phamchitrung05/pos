@@ -5,7 +5,7 @@
     @endphp
 
     <div class="fi-section-content flex h-full min-h-0 flex-col overflow-hidden bg-[#fbfaf8] text-slate-900">
-        <div id="view-moi" class="min-h-0 flex-1 overflow-y-auto">
+        <div class="min-h-0 flex-1 overflow-y-auto">
             <livewire:pos.table-grid :store-id="$tableMap['storeId']" :selected-table-id="$selectedTableId" />
         </div>
     </div>

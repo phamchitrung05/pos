@@ -16,7 +16,7 @@
     "src": "node_modules/@fontsource-variable/baloo-2/files/baloo-2-vietnamese-wght-normal.woff2"
   },
   "resources/css/app.css": {
-    "file": "assets/app-Da9ALdTw.css",
+    "file": "assets/app-B7iqoK5a.css",
     "src": "resources/css/app.css",
     "isEntry": true,
     "name": "app",
@@ -25,7 +25,7 @@
     ]
   },
   "resources/css/filament/admin/theme.css": {
-    "file": "assets/theme-DfbnpzVA.css",
+    "file": "assets/theme-CCHZtqXa.css",
     "src": "resources/css/filament/admin/theme.css",
     "isEntry": true,
     "name": "theme",

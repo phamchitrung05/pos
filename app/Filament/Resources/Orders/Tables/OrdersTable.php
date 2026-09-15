@@ -3,6 +3,8 @@
 namespace App\Filament\Resources\Orders\Tables;
 
 use App\Models\Order;
+use App\Queries\Pos\TableMapReadModel;
+use App\Queries\Pos\TableSessionActivityReadModel;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\ViewAction;
@@ -33,11 +35,21 @@ class OrdersTable
                     ->tooltip('Xem chi tiết')
                     ->size(Size::Medium)
                     ->color(Color::Orange)
-                    ->modalHeading('Chi tiết đơn hàng')
+                    ->modalHeading('')
                     ->modalWidth('7xl')
-                    ->modalContent(fn (Order $record) => view('filament.resources.orders.view-modal', [
-                        'record' => $record,
-                    ]))
+                    ->extraModalWindowAttributes(['class' => 'order-view-modal-window s735 scroll-none'])
+                    ->modalContent(function (Order $record) {
+                        $selectedTable = app(TableMapReadModel::class)->orderDetails($record);
+                        $events = $record->tableSession
+                            ? app(TableSessionActivityReadModel::class)->for($record->tableSession)
+                            : collect();
+
+                        return view('filament.resources.orders.view-modal', [
+                            'selectedTable' => $selectedTable,
+                            'events' => $events,
+                        ]);
+                    })
+                    ->modalCancelActionLabel("Đóng")
                     ->schema([]),
             ])
             ->toolbarActions([

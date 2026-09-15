@@ -1,5 +1,6 @@
-<div
-    id="order-detail-modal"
-    class="min-h-40"
-    data-order-id="{{ $record->getKey() }}"
-></div>
+@include('filament.pages.pos.table-modal', [
+    'selectedTable' => $selectedTable,
+    'events' => $events,
+    'tableMap' => ['kitchenPrinters' => []],
+    'isReadOnly' => true,
+])

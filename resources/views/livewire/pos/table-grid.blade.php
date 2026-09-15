@@ -6,7 +6,7 @@
     $revenueLabel = number_format((float) ($statistics['revenue'] ?? 0), 0, ',', '.').' đ';
 @endphp
 
-<div wire:poll.60s="refreshGrid" class="h-[calc(100dvh-9rem)] bg-[#fbfaf8] text-[#101a33] overflow-hidden">
+<div wire:poll.60s="refreshGrid" class="h-[calc(100dvh-8rem)] bg-[#fbfaf8] text-[#101a33] overflow-auto lg:overflow-hidden scroll-none">
     <div class="flex min-h-full">
         <main class="min-w-0 flex-1">
             <div class="h-dvh">

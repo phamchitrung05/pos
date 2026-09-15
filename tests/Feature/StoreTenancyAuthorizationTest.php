@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\UserRole;
+use App\Filament\Resources\OrderItems\OrderItemResource;
 use App\Filament\Resources\Orders\Pages\ListOrders;
 use App\Filament\Resources\Payments\Pages\ListPayments;
 use App\Filament\Resources\Products\ProductResource;
@@ -21,6 +22,9 @@ use App\Models\Store;
 use App\Models\TableSession;
 use App\Models\TableZone;
 use App\Models\User;
+use App\Queries\Pos\TableMapReadModel;
+use App\Queries\Pos\TableSessionActivityReadModel;
+use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
@@ -105,6 +109,12 @@ class StoreTenancyAuthorizationTest extends TestCase
         }
     }
 
+    /** Dòng món vẫn có resource nội bộ nhưng không xuất hiện như một trang độc lập trên sidebar. */
+    public function test_order_items_are_hidden_from_navigation(): void
+    {
+        $this->assertFalse(OrderItemResource::shouldRegisterNavigation());
+    }
+
     /** Bảng đơn mở modal xem và bảng thanh toán hiển thị mã đơn nghiệp vụ. */
     public function test_order_and_payment_tables_use_the_expected_read_actions(): void
     {
@@ -120,11 +130,21 @@ class StoreTenancyAuthorizationTest extends TestCase
             ->assertTableActionExists('view')
             ->assertTableActionDoesNotExist('edit')
             ->mountTableAction('view', $order->getKey())
-            ->assertSeeHtml('data-order-id="'.$order->getKey().'"');
+            ->assertActionMounted(TestAction::make('view')->table($order));
 
         Livewire::test(ListPayments::class)
             ->assertTableActionDoesNotExist('edit')
             ->assertTableColumnStateSet('order.code', $payment->order->code, $payment);
+
+        $modalHtml = view('filament.resources.orders.view-modal', [
+            'selectedTable' => app(TableMapReadModel::class)->orderDetails($order),
+            'events' => app(TableSessionActivityReadModel::class)->for($order->tableSession),
+        ])->render();
+
+        $this->assertStringContainsString('Danh sách món', $modalHtml);
+        $this->assertStringContainsString($order->code, $modalHtml);
+        $this->assertStringContainsString('Nhật ký thao tác', $modalHtml);
+        $this->assertStringNotContainsString('Thêm món', $modalHtml);
     }
 
     /** Middleware Filament phải trả 404 khi staff đoán tenant ID trên URL. */

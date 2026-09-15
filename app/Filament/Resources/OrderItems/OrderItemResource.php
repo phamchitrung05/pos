@@ -30,6 +30,8 @@ class OrderItemResource extends Resource
 
     protected static ?string $navigationLabel = 'Dòng món';
 
+    protected static bool $shouldRegisterNavigation = false;
+
     protected static string|\UnitEnum|null $navigationGroup = 'Đơn hàng';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedListBullet;

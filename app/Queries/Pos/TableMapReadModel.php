@@ -5,6 +5,7 @@ namespace App\Queries\Pos;
 use App\Enums\PrinterType;
 use App\Enums\TableSessionStatus;
 use App\Models\DiningTable;
+use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Printer;
 use App\Models\ProductGroup;
@@ -87,6 +88,18 @@ final class TableMapReadModel
         return $table ? $this->formatTable($table) : null;
     }
 
+    /** Dựng cùng contract chi tiết bàn cho một order lịch sử trong modal chỉ đọc. */
+    public function orderDetails(Order $order): array
+    {
+        $order->loadMissing(['tableSession.table.zone', 'items.product']);
+
+        return $this->formatTableDetails(
+            table: $order->tableSession?->table,
+            session: $order->tableSession,
+            order: $order,
+        );
+    }
+
     /** Nạp thực đơn đang bán theo nhóm cho panel order, không nằm trong polling grid. */
     public function catalog(Store $store): array
     {
@@ -156,21 +169,30 @@ final class TableMapReadModel
         /** @var TableSession|null $session */
         $session = $table->sessions->first();
         $order = $session?->order;
+
+        return $this->formatTableDetails($table, $session, $order);
+    }
+
+    /** Chuyển bàn, phiên và order thành contract dùng chung cho các modal POS. */
+    private function formatTableDetails(?DiningTable $table, ?TableSession $session, ?Order $order): array
+    {
         $items = $order?->items ?? new EloquentCollection;
         $elapsedSeconds = $session?->start_time
-            ? max(0, (int) $session->start_time->diffInSeconds(now()))
+            ? max(0, (int) $session->start_time->diffInSeconds($session->end_time ?? now()))
             : 0;
 
         return [
-            'id' => (int) $table->getKey(),
-            'name' => $table->name,
+            'id' => $table ? (int) $table->getKey() : null,
+            'name' => $table?->name ?? 'Bàn đã xóa',
             'zone' => [
-                'id' => $table->zone ? (int) $table->zone->getKey() : null,
-                'name' => $table->zone?->name ?? 'Chưa phân khu',
+                'id' => $table?->zone ? (int) $table->zone->getKey() : null,
+                'name' => $table?->zone?->name ?? 'Chưa phân khu',
             ],
-            'status' => $session ? 'occupied' : 'empty',
+            'status' => $session?->status === TableSessionStatus::Open ? 'occupied' : 'empty',
             'session' => $session ? [
                 'id' => (int) $session->getKey(),
+                'status' => $session->status->value,
+                'statusLabel' => $session->status === TableSessionStatus::Open ? 'Đang có khách' : $session->status->getLabel(),
                 'startTime' => $session->start_time?->toIso8601String(),
                 'startTimeLabel' => $session->start_time?->format('H:i - d/m/Y'),
                 'elapsedSeconds' => $elapsedSeconds,

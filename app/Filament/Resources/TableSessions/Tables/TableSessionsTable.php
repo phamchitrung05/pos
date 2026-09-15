@@ -8,7 +8,6 @@ use App\Queries\Pos\TableSessionActivityReadModel;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Support\Colors\Color;
 use Filament\Support\Enums\Size;
@@ -62,6 +61,8 @@ class TableSessionsTable
                     ->color(Color::Orange)
                     ->modalHeading('')
                     ->modalWidth('7xl')
+
+                    ->extraModalWindowAttributes(['class' => 'order-view-modal-window s960'])
                     ->modalContent(function (TableSession $record) {
                         $record->load(['table.zone', 'openedBy', 'order.items', 'order.payments']);
                         $events = app(TableSessionActivityReadModel::class)->for($record);
@@ -73,11 +74,6 @@ class TableSessionsTable
                     })
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Đóng'),
-                EditAction::make()
-                    ->iconButton()
-                    ->tooltip('Chỉnh sửa')
-                    ->size(Size::Medium)
-                    ->color(Color::Orange),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
