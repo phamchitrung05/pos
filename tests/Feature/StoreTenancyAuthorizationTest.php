@@ -119,7 +119,7 @@ class StoreTenancyAuthorizationTest extends TestCase
         Livewire::test(ListOrders::class)
             ->assertTableActionExists('view')
             ->assertTableActionDoesNotExist('edit')
-            ->mountTableAction('view', $order)
+            ->mountTableAction('view', $order->getKey())
             ->assertSeeHtml('data-order-id="'.$order->getKey().'"');
 
         Livewire::test(ListPayments::class)

@@ -6,7 +6,7 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Support\Colors\Color;
-use Filament\Support\Enums\IconSize;
+use Filament\Support\Enums\Size;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -31,7 +31,7 @@ class ProductsTable
                 EditAction::make()
                     ->iconButton()
                     ->tooltip('Chỉnh sửa')
-                    ->iconSize(IconSize::Medium)
+                    ->size(Size::Medium)
                     ->color(Color::Orange),
             ])
             ->toolbarActions([

@@ -7,7 +7,7 @@ use App\Enums\PrintType;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Support\Colors\Color;
-use Filament\Support\Enums\IconSize;
+use Filament\Support\Enums\Size;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -37,12 +37,12 @@ class PrintJobsTable
                 ViewAction::make()
                     ->iconButton()
                     ->tooltip('Xem chi tiết')
-                    ->iconSize(IconSize::Medium)
+                    ->size(Size::Medium)
                     ->color(Color::Orange),
                 EditAction::make()
                     ->iconButton()
                     ->tooltip('Chỉnh sửa')
-                    ->iconSize(IconSize::Medium)
+                    ->size(Size::Medium)
                     ->color(Color::Orange),
             ])
             ->defaultSort('id', 'desc');

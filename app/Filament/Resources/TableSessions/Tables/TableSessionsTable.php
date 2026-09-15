@@ -11,7 +11,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Support\Colors\Color;
-use Filament\Support\Enums\IconSize;
+use Filament\Support\Enums\Size;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
@@ -58,7 +58,7 @@ class TableSessionsTable
                     ->iconButton()
                     ->tooltip('Xem chi tiết')
                     ->icon(Heroicon::OutlinedEye)
-                    ->iconSize(IconSize::Medium)
+                    ->size(Size::Medium)
                     ->color(Color::Orange)
                     ->modalHeading('')
                     ->modalWidth('7xl')
@@ -76,7 +76,7 @@ class TableSessionsTable
                 EditAction::make()
                     ->iconButton()
                     ->tooltip('Chỉnh sửa')
-                    ->iconSize(IconSize::Medium)
+                    ->size(Size::Medium)
                     ->color(Color::Orange),
             ])
             ->toolbarActions([

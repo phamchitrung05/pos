@@ -7,7 +7,7 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Support\Colors\Color;
-use Filament\Support\Enums\IconSize;
+use Filament\Support\Enums\Size;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -31,7 +31,7 @@ class OrdersTable
                 ViewAction::make()
                     ->iconButton()
                     ->tooltip('Xem chi tiết')
-                    ->iconSize(IconSize::Medium)
+                    ->size(Size::Medium)
                     ->color(Color::Orange)
                     ->modalHeading('Chi tiết đơn hàng')
                     ->modalWidth('7xl')

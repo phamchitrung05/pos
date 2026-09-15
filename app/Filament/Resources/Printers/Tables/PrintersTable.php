@@ -11,7 +11,7 @@ use Filament\Actions\EditAction;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Filament\Support\Colors\Color;
-use Filament\Support\Enums\IconSize;
+use Filament\Support\Enums\Size;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -44,7 +44,7 @@ class PrintersTable
                     ->iconButton()
                     ->tooltip('Cấp mã xác thực')
                     ->icon(Heroicon::OutlinedKey)
-                    ->iconSize(IconSize::Medium)
+                    ->size(Size::Medium)
                     ->color(Color::Orange)
                     ->requiresConfirmation()
                     // Credential thiết bị là cấu hình hạ tầng, chỉ owner được phép xoay token.
@@ -62,7 +62,7 @@ class PrintersTable
                 EditAction::make()
                     ->iconButton()
                     ->tooltip('Chỉnh sửa')
-                    ->iconSize(IconSize::Medium)
+                    ->size(Size::Medium)
                     ->color(Color::Orange),
             ])
             ->toolbarActions([
