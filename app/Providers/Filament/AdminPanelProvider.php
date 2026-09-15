@@ -37,17 +37,17 @@ class AdminPanelProvider extends PanelProvider
             ->strictAuthorization()
             ->colors([
                 'primary' => [
-                    50 => 'oklch(0.97 0.015 255)',
-                    100 => 'oklch(0.94 0.03 255)',
-                    200 => 'oklch(0.88 0.06 255)',
-                    300 => 'oklch(0.80 0.10 255)',
-                    400 => 'oklch(0.68 0.17 255)',
-                    500 => 'oklch(0.55 0.22 255)',
-                    600 => 'oklch(0.50 0.22 255)',
-                    700 => 'oklch(0.43 0.19 255)',
-                    800 => 'oklch(0.36 0.15 255)',
-                    900 => 'oklch(0.28 0.11 255)',
-                    950 => 'oklch(0.20 0.08 255)',
+                    50 => 'oklch(0.97 0.018 65.48)',
+                    100 => 'oklch(0.94 0.035 65.48)',
+                    200 => 'oklch(0.90 0.060 65.48)',
+                    300 => 'oklch(0.85 0.095 65.48)',
+                    400 => 'oklch(0.80 0.130 65.48)',
+                    500 => 'oklch(0.7604 0.1552 65.48)',
+                    600 => 'oklch(0.68 0.145 65.48)',
+                    700 => 'oklch(0.59 0.125 65.48)',
+                    800 => 'oklch(0.50 0.105 65.48)',
+                    900 => 'oklch(0.42 0.085 65.48)',
+                    950 => 'oklch(0.32 0.065 65.48)',
                 ],
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
