@@ -3,15 +3,23 @@
 namespace Tests\Feature;
 
 use App\Enums\UserRole;
+use App\Filament\Resources\Orders\Pages\ListOrders;
+use App\Filament\Resources\Payments\Pages\ListPayments;
 use App\Filament\Resources\Products\ProductResource;
 use App\Filament\Resources\Stores\StoreResource;
 use App\Filament\Resources\Users\Pages\CreateUser;
 use App\Filament\Resources\Users\UserResource;
+use App\Models\DiningTable;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Payment;
+use App\Models\Printer;
+use App\Models\PrintJob;
 use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Store;
+use App\Models\TableSession;
+use App\Models\TableZone;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -71,6 +79,52 @@ class StoreTenancyAuthorizationTest extends TestCase
         $this->assertFalse($staff->can('viewAny', User::class));
         $this->assertTrue($owner->can('viewAny', Store::class));
         $this->assertTrue($owner->can('create', User::class));
+    }
+
+    /** Owner có quyền cập nhật mọi model được quản lý trong Filament. */
+    public function test_owner_can_update_every_managed_model(): void
+    {
+        $owner = $this->owner();
+        $models = [
+            Store::query()->firstOrFail(),
+            User::query()->whereNotNull('store_id')->firstOrFail(),
+            TableZone::query()->firstOrFail(),
+            DiningTable::query()->firstOrFail(),
+            TableSession::query()->firstOrFail(),
+            ProductGroup::query()->firstOrFail(),
+            Product::query()->firstOrFail(),
+            Order::query()->firstOrFail(),
+            OrderItem::query()->firstOrFail(),
+            Payment::query()->firstOrFail(),
+            Printer::query()->firstOrFail(),
+            PrintJob::query()->firstOrFail(),
+        ];
+
+        foreach ($models as $model) {
+            $this->assertTrue($owner->can('update', $model));
+        }
+    }
+
+    /** Bảng đơn mở modal xem và bảng thanh toán hiển thị mã đơn nghiệp vụ. */
+    public function test_order_and_payment_tables_use_the_expected_read_actions(): void
+    {
+        $owner = $this->owner();
+        $store = Store::query()->firstOrFail();
+        $order = Order::query()->where('store_id', $store->getKey())->firstOrFail();
+        $payment = Payment::query()->where('store_id', $store->getKey())->with('order')->firstOrFail();
+
+        $this->actingAs($owner);
+        Filament::setTenant($store, isQuiet: true);
+
+        Livewire::test(ListOrders::class)
+            ->assertTableActionExists('view')
+            ->assertTableActionDoesNotExist('edit')
+            ->mountTableAction('view', $order)
+            ->assertSeeHtml('data-order-id="'.$order->getKey().'"');
+
+        Livewire::test(ListPayments::class)
+            ->assertTableActionDoesNotExist('edit')
+            ->assertTableColumnStateSet('order.code', $payment->order->code, $payment);
     }
 
     /** Middleware Filament phải trả 404 khi staff đoán tenant ID trên URL. */

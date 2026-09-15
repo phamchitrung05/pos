@@ -37,7 +37,7 @@ final class ClaimNextPrintJob
                     'claim_token_hash' => null,
                     'claimed_at' => null,
                     'lease_expires_at' => null,
-                    'error_message' => 'Lease trước đã hết hạn; hệ thống tự đưa về hàng đợi.',
+                    'error_message' => 'Thời gian xử lý trước đã hết hạn; hệ thống tự đưa lệnh về hàng đợi.',
                     'updated_at' => now(),
                 ]);
 

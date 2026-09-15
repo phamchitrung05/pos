@@ -20,7 +20,13 @@ class ProductResource extends Resource
 
     protected static ?string $model = Product::class;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Products';
+    protected static ?string $modelLabel = 'Sản phẩm';
+
+    protected static ?string $pluralModelLabel = 'Sản phẩm';
+
+    protected static ?string $navigationLabel = 'Sản phẩm';
+
+    protected static string|\UnitEnum|null $navigationGroup = 'Sản phẩm';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCube;
 

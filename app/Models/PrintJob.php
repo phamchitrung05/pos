@@ -69,7 +69,7 @@ class PrintJob extends Model
             if ($printJob->payment_id !== null
                 && (int) Payment::query()->whereKey($printJob->payment_id)->value('order_id') !== (int) $printJob->order_id) {
                 throw ValidationException::withMessages([
-                    'payment_id' => 'Thanh toán và lệnh in phải tham chiếu cùng một order.',
+                    'payment_id' => 'Thanh toán và lệnh in phải tham chiếu cùng một đơn hàng.',
                 ]);
             }
 

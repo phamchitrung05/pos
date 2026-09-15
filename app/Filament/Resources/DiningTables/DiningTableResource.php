@@ -2,8 +2,6 @@
 
 namespace App\Filament\Resources\DiningTables;
 
-use App\Filament\Resources\DiningTables\Pages\CreateDiningTable;
-use App\Filament\Resources\DiningTables\Pages\EditDiningTable;
 use App\Filament\Resources\DiningTables\Pages\ListDiningTables;
 use App\Filament\Resources\DiningTables\Schemas\DiningTableForm;
 use App\Filament\Resources\DiningTables\Tables\DiningTablesTable;
@@ -21,7 +19,13 @@ class DiningTableResource extends Resource
 
     protected static ?string $model = DiningTable::class;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Dining Tables';
+    protected static ?string $modelLabel = 'Bàn';
+
+    protected static ?string $pluralModelLabel = 'Bàn';
+
+    protected static ?string $navigationLabel = 'Danh sách bàn';
+
+    protected static string|\UnitEnum|null $navigationGroup = 'Quản lý bàn';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTableCells;
 
@@ -46,14 +50,12 @@ class DiningTableResource extends Resource
     {
         return [
             'index' => ListDiningTables::route('/'),
-            'create' => CreateDiningTable::route('/create'),
-            'edit' => EditDiningTable::route('/{record}/edit'),
         ];
     }
 
     /**
      * Ghép thêm mục navigation của trang "Sơ Đồ Bàn" (ManageTableSessions)
-     * vào sidebar, cùng nhóm "Dining Tables".
+     * vào sidebar, cùng nhóm "Quản lý bàn".
      *
      * Mặc định Filament chỉ đăng ký MỘT item navigation cho mỗi resource
      * (trỏ tới trang index). Vì custom resource page không tự xuất hiện

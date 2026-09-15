@@ -24,7 +24,13 @@ class OrderResource extends Resource
 
     protected static ?string $model = Order::class;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Orders';
+    protected static ?string $modelLabel = 'Đơn hàng';
+
+    protected static ?string $pluralModelLabel = 'Đơn hàng';
+
+    protected static ?string $navigationLabel = 'Đơn hàng';
+
+    protected static string|\UnitEnum|null $navigationGroup = 'Đơn hàng';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedShoppingCart;
 
@@ -55,8 +61,8 @@ class OrderResource extends Resource
     }
 
     /**
-     * Ghép thêm mục navigation của trang "History Order" (HistoryOrder)
-     * vào sidebar, cùng nhóm "Orders".
+     * Ghép thêm mục navigation của trang lịch sử đơn hàng
+     * vào sidebar, cùng nhóm "Đơn hàng".
      *
      * Mặc định Filament chỉ đăng ký MỘT item navigation cho mỗi resource
      * (trỏ tới trang index). Vì custom resource page không tự xuất hiện

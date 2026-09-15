@@ -2,15 +2,18 @@
 
 namespace App\Filament\Resources\Concerns;
 
+use App\Models\User;
+use Filament\Facades\Filament;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * Biến Resource giao dịch thành màn hình chỉ đọc trong Filament.
+ * Giới hạn CRUD trực tiếp trên các Resource giao dịch trong Filament.
  *
  * Order, dòng món, payment, phiên bàn và lệnh in không phải dữ liệu danh mục.
  * Nếu cho phép CRUD trực tiếp, người dùng có thể bỏ qua transaction và invariant
  * trong `App\Actions\Pos`. Giao diện POS phải gọi action chuyên trách; Resource
- * tiêu chuẩn chỉ dùng để theo dõi và đối soát dữ liệu đã phát sinh.
+ * tiêu chuẩn chủ yếu dùng để theo dõi và đối soát dữ liệu đã phát sinh. Owner
+ * vẫn được phép sửa khi cần khắc phục dữ liệu vận hành.
  */
 trait IsPosTransactionReadOnly
 {
@@ -20,10 +23,14 @@ trait IsPosTransactionReadOnly
         return false;
     }
 
-    /** Không cho sửa riêng lẻ một record vì thay đổi phải đi qua action nghiệp vụ. */
+    /** Chỉ owner có quyền update và truy cập tenant của record mới được sửa trực tiếp. */
     public static function canEdit(Model $record): bool
     {
-        return false;
+        $user = Filament::auth()->user();
+
+        return $user instanceof User
+            && $user->isOwner()
+            && static::getEditAuthorizationResponse($record)->allowed();
     }
 
     /** Không xóa giao dịch để giữ lịch sử order, thanh toán và in bill. */

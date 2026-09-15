@@ -24,7 +24,13 @@ class PaymentResource extends Resource
 
     protected static ?string $model = Payment::class;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Orders';
+    protected static ?string $modelLabel = 'Thanh toán';
+
+    protected static ?string $pluralModelLabel = 'Thanh toán';
+
+    protected static ?string $navigationLabel = 'Thanh toán';
+
+    protected static string|\UnitEnum|null $navigationGroup = 'Đơn hàng';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCreditCard;
 
@@ -55,14 +61,14 @@ class PaymentResource extends Resource
     }
 
     /**
-     * Ghép thêm mục navigation của trang "History Payment" (HistoryPayment)
-     * vào sidebar, cùng nhóm "Orders".
+     * Ghép thêm mục navigation của trang lịch sử thanh toán
+     * vào sidebar, cùng nhóm "Đơn hàng".
      *
      * Mặc định Filament chỉ đăng ký MỘT item navigation cho mỗi resource
      * (trỏ tới trang index). Vì custom resource page không tự xuất hiện
      * trên sidebar, ta append `getNavigationItems()` của trang vào đây —
      * nhãn/nhóm/icon/sort lấy từ các thuộc tính của trang (pattern giống
-     * "Sơ Đồ Bàn" của DiningTableResource và "History Order").
+     * "Sơ đồ bàn" của DiningTableResource và lịch sử đơn hàng).
      */
     public static function getNavigationItems(): array
     {

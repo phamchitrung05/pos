@@ -327,7 +327,7 @@ class TableMap extends Page
 
         Notification::make()
             ->title("Đã tạo phiếu bếp #{$printJob->getKey()}")
-            ->body('Thiết bị tại cửa hàng cần nhận PrintJob và gửi tới máy in LAN.')
+            ->body('Thiết bị tại cửa hàng cần nhận lệnh in và gửi tới máy in trong mạng LAN.')
             ->success()
             ->send();
     }
@@ -354,7 +354,7 @@ class TableMap extends Page
 
         if (! $session?->order) {
             throw ValidationException::withMessages([
-                'selectedTableId' => 'Bàn chưa có phiên và order đang mở.',
+                'selectedTableId' => 'Bàn chưa có phiên phục vụ và đơn hàng đang mở.',
             ]);
         }
 

@@ -16,7 +16,7 @@ class ProductGroupForm
                 // Filament tự gán store_id từ tenant trên URL, vì vậy form
                 // không mở quyền lựa chọn hoặc thay đổi chi nhánh sở hữu.
                 TextInput::make('name')->label('Tên nhóm')->required()->maxLength(255),
-                TextInput::make('icon')->label('Icon')->maxLength(255),
+                TextInput::make('icon')->label('Biểu tượng')->maxLength(255),
                 TextInput::make('sort_order')->label('Thứ tự')->numeric()->default(0)->required(),
                 Toggle::make('is_active')->label('Đang hiển thị')->default(true),
             ]);

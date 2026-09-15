@@ -51,7 +51,7 @@ final class OperationsOverview extends StatsOverviewWidget
                 ->descriptionIcon(Heroicon::OutlinedTableCells)
                 ->color('success')
                 ->url(TableMap::getUrl(panel: 'admin', tenant: $store)),
-            Stat::make('Order đang mở', $openOrders)
+            Stat::make('Đơn hàng đang mở', $openOrders)
                 ->description('Đi tới sơ đồ bàn để xử lý')
                 ->descriptionIcon(Heroicon::OutlinedShoppingCart)
                 ->color('primary')

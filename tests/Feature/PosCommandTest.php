@@ -225,7 +225,7 @@ class PosCommandTest extends TestCase
         $failedAgain = $processor->handle($commandId, $store, $deviceId, $actor, PosCommandType::OpenTable, $payload);
 
         $this->assertSame(PosCommandStatus::Failed, $failed->status);
-        $this->assertSame('Không tìm thấy dữ liệu thuộc cửa hàng cho command này.', $failed->error);
+        $this->assertSame('Không tìm thấy dữ liệu thuộc cửa hàng cho thao tác này.', $failed->error);
         $this->assertSame($failed->error, $failedAgain->error);
         $this->assertSame(1, $failedAgain->attempts);
         $this->assertNotNull($failedAgain->processed_at);

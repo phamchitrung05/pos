@@ -1,6 +1,22 @@
 {
+  "node_modules/@fontsource-variable/baloo-2/files/baloo-2-devanagari-wght-normal.woff2": {
+    "file": "assets/baloo-2-devanagari-wght-normal-B4j4n2PV.woff2",
+    "src": "node_modules/@fontsource-variable/baloo-2/files/baloo-2-devanagari-wght-normal.woff2"
+  },
+  "node_modules/@fontsource-variable/baloo-2/files/baloo-2-latin-ext-wght-normal.woff2": {
+    "file": "assets/baloo-2-latin-ext-wght-normal-Dz43yst_.woff2",
+    "src": "node_modules/@fontsource-variable/baloo-2/files/baloo-2-latin-ext-wght-normal.woff2"
+  },
+  "node_modules/@fontsource-variable/baloo-2/files/baloo-2-latin-wght-normal.woff2": {
+    "file": "assets/baloo-2-latin-wght-normal-B_TVFhwJ.woff2",
+    "src": "node_modules/@fontsource-variable/baloo-2/files/baloo-2-latin-wght-normal.woff2"
+  },
+  "node_modules/@fontsource-variable/baloo-2/files/baloo-2-vietnamese-wght-normal.woff2": {
+    "file": "assets/baloo-2-vietnamese-wght-normal-C4ZonJY6.woff2",
+    "src": "node_modules/@fontsource-variable/baloo-2/files/baloo-2-vietnamese-wght-normal.woff2"
+  },
   "resources/css/app.css": {
-    "file": "assets/app-CQufI_iF.css",
+    "file": "assets/app-Da9ALdTw.css",
     "src": "resources/css/app.css",
     "isEntry": true,
     "name": "app",
@@ -9,7 +25,7 @@
     ]
   },
   "resources/css/filament/admin/theme.css": {
-    "file": "assets/theme-YPyY3etc.css",
+    "file": "assets/theme-DfbnpzVA.css",
     "src": "resources/css/filament/admin/theme.css",
     "isEntry": true,
     "name": "theme",

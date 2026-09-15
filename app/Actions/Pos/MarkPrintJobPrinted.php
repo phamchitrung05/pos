@@ -41,7 +41,7 @@ final class MarkPrintJobPrinted
     private function ensureClaimMatches(PrintJob $job, string $claimToken): void
     {
         if (blank($job->claim_token_hash) || ! hash_equals($job->claim_token_hash, hash('sha256', $claimToken))) {
-            throw ValidationException::withMessages(['claim_token' => 'Claim token không hợp lệ cho lệnh in này.']);
+            throw ValidationException::withMessages(['claim_token' => 'Mã nhận lệnh không hợp lệ cho lệnh in này.']);
         }
     }
 }

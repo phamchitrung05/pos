@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Models\Store;
+use Filament\FontProviders\GoogleFontProvider;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -30,6 +31,12 @@ class AdminPanelProvider extends PanelProvider
             ->tenant(Store::class)
             ->tenantRoutePrefix('store')
             ->path('admin')
+            ->brandName('Malibu POS')
+            ->font(
+                'Baloo 2',
+                url: 'https://fonts.googleapis.com/css2?family=Baloo+2:wght@400..800&display=swap',
+                provider: GoogleFontProvider::class,
+            )
             ->viteTheme('resources/css/filament/admin/theme.css')
             ->login()
             // Khi thiếu policy hoặc method policy, Filament phải báo lỗi thay

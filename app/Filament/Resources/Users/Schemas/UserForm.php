@@ -29,6 +29,7 @@ class UserForm
                         titleAttribute: 'name',
                         modifyQueryUsing: fn (Builder $query): Builder => $query->where('name', UserRole::Staff->value),
                     )
+                    ->getOptionLabelFromRecordUsing(fn (): string => 'Nhân viên')
                     ->multiple()
                     ->maxItems(1)
                     ->preload()

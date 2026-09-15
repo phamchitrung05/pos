@@ -21,7 +21,13 @@ class ProductGroupResource extends Resource
 
     protected static ?string $model = ProductGroup::class;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Products';
+    protected static ?string $modelLabel = 'Nhóm sản phẩm';
+
+    protected static ?string $pluralModelLabel = 'Nhóm sản phẩm';
+
+    protected static ?string $navigationLabel = 'Nhóm sản phẩm';
+
+    protected static string|\UnitEnum|null $navigationGroup = 'Sản phẩm';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedSquare3Stack3d;
 

@@ -24,7 +24,13 @@ class TableSessionResource extends Resource
 
     protected static ?string $model = TableSession::class;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Dining Tables';
+    protected static ?string $modelLabel = 'Lịch Sử Bàn';
+
+    protected static ?string $pluralModelLabel = 'Lịch Sử Bàn';
+
+    protected static ?string $navigationLabel = 'Lịch Sử Bàn';
+
+    protected static string|\UnitEnum|null $navigationGroup = 'Quản lý bàn';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClock;
 

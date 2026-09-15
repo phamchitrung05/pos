@@ -1,8 +1,27 @@
+@import '@fontsource-variable/baloo-2';
 @import '../../../../vendor/filament/filament/resources/css/theme.css';
 
 @source '../../../../app/Filament/**/*';
 @source '../../../../resources/views/filament/**/*';
 @source '../../../../resources/views/livewire/**/*';
+
+html.fi,
+html.fi body,
+html.fi button,
+html.fi input,
+html.fi select,
+html.fi textarea {
+    font-family: 'Baloo 2', 'Baloo 2 Variable', ui-sans-serif, system-ui, sans-serif !important;
+}
+
+.fi-sidebar-item-label {
+    font-size: 1rem;
+    line-height: 1.5rem;
+}
+
+.fi-sidebar-group-label {
+    font-size: 0.9375rem;
+}
 
 .scroll-none {
     scrollbar-width: none;

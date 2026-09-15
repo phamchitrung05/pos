@@ -21,7 +21,13 @@ class PrinterResource extends Resource
 
     protected static ?string $model = Printer::class;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Print';
+    protected static ?string $modelLabel = 'Máy in';
+
+    protected static ?string $pluralModelLabel = 'Máy in';
+
+    protected static ?string $navigationLabel = 'Máy in';
+
+    protected static string|\UnitEnum|null $navigationGroup = 'In ấn';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedPrinter;
 

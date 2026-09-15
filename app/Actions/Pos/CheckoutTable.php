@@ -64,7 +64,7 @@ final class CheckoutTable
                 if ($existingPayment) {
                     if ((int) $existingPayment->order_id !== (int) $lockedOrder->getKey()) {
                         throw ValidationException::withMessages([
-                            'client_request_id' => 'Mã yêu cầu thanh toán đã được dùng cho một order khác.',
+                            'client_request_id' => 'Mã yêu cầu thanh toán đã được dùng cho một đơn hàng khác.',
                         ]);
                     }
 
@@ -80,7 +80,7 @@ final class CheckoutTable
 
                 if ($lockedOrder->status !== OrderStatus::Open || $lockedSession->status !== TableSessionStatus::Open) {
                     throw ValidationException::withMessages([
-                        'order_id' => 'Order hoặc phiên bàn đã được đóng, không thể thanh toán thêm lần nữa.',
+                        'order_id' => 'Đơn hàng hoặc phiên bàn đã được đóng, không thể thanh toán thêm lần nữa.',
                     ]);
                 }
 
@@ -99,7 +99,7 @@ final class CheckoutTable
 
                 if ((float) $lockedOrder->total <= 0) {
                     throw ValidationException::withMessages([
-                        'amount' => 'Không thể thanh toán order chưa có món hoặc có tổng tiền bằng 0.',
+                        'amount' => 'Không thể thanh toán đơn hàng chưa có món hoặc có tổng tiền bằng 0.',
                     ]);
                 }
 
@@ -144,7 +144,7 @@ final class CheckoutTable
 
             if ((int) $existingPayment->order_id !== (int) $order->getKey()) {
                 throw ValidationException::withMessages([
-                    'client_request_id' => 'Mã yêu cầu thanh toán đã được dùng cho một order khác.',
+                    'client_request_id' => 'Mã yêu cầu thanh toán đã được dùng cho một đơn hàng khác.',
                 ]);
             }
 

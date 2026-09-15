@@ -31,7 +31,7 @@ final class EnsurePosDevice
             && $user->tokenCan('pos:use')
             && $user->tokenCan("device:{$deviceId}"),
             403,
-            'Token không được cấp cho thiết bị POS này.',
+            'Mã xác thực không được cấp cho thiết bị POS này.',
         );
 
         $store = $user->store;

@@ -10,6 +10,8 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
+use Filament\Support\Colors\Color;
+use Filament\Support\Enums\IconSize;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -29,7 +31,7 @@ class PrintersTable
                 TextColumn::make('port')->label('Cổng'),
                 TextColumn::make('paper_width_mm')->label('Khổ giấy')->suffix(' mm'),
                 IconColumn::make('is_active')->label('Hoạt động')->boolean(),
-                TextColumn::make('api_token_hint')->label('Token agent')->formatStateUsing(
+                TextColumn::make('api_token_hint')->label('Mã xác thực thiết bị')->formatStateUsing(
                     fn (?string $state): string => $state ? '••••'.$state : 'Chưa cấp',
                 ),
             ])
@@ -38,9 +40,12 @@ class PrintersTable
             ])
             ->recordActions([
                 Action::make('issueApiToken')
-                    ->label('Cấp token agent')
+                    ->label('Cấp mã xác thực')
+                    ->iconButton()
+                    ->tooltip('Cấp mã xác thực')
                     ->icon(Heroicon::OutlinedKey)
-                    ->color('warning')
+                    ->iconSize(IconSize::Medium)
+                    ->color(Color::Orange)
                     ->requiresConfirmation()
                     // Credential thiết bị là cấu hình hạ tầng, chỉ owner được phép xoay token.
                     ->visible(fn (): bool => Filament::auth()->user() instanceof User && Filament::auth()->user()->isOwner())
@@ -48,13 +53,17 @@ class PrintersTable
                         $token = $record->issueApiToken();
 
                         Notification::make()
-                            ->title('Token agent vừa được cấp')
-                            ->body("Lưu token ngay, hệ thống sẽ không hiển thị lại:\n{$token}")
+                            ->title('Đã cấp mã xác thực thiết bị')
+                            ->body("Hãy lưu mã xác thực ngay; hệ thống sẽ không hiển thị lại:\n{$token}")
                             ->warning()
                             ->persistent()
                             ->send();
                     }),
-                EditAction::make(),
+                EditAction::make()
+                    ->iconButton()
+                    ->tooltip('Chỉnh sửa')
+                    ->iconSize(IconSize::Medium)
+                    ->color(Color::Orange),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

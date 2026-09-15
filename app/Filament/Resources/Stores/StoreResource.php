@@ -22,13 +22,13 @@ class StoreResource extends Resource
     /** Store chính là tenant nên resource này chỉ được policy owner bảo vệ, không tự scope vào một Store. */
     protected static bool $isScopedToTenant = false;
 
-    protected static ?string $modelLabel = 'Store';
+    protected static ?string $modelLabel = 'Chi nhánh';
 
-    protected static ?string $pluralModelLabel = 'Stores';
+    protected static ?string $pluralModelLabel = 'Chi nhánh';
 
-    protected static ?string $navigationLabel = 'Stores';
+    protected static ?string $navigationLabel = 'Chi nhánh';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Store';
+    protected static string|\UnitEnum|null $navigationGroup = 'Cửa hàng';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBuildingStorefront;
 

@@ -18,11 +18,11 @@ final class RenewPrintJobLease
 
             if (blank($lockedJob->claim_token_hash)
                 || ! hash_equals($lockedJob->claim_token_hash, hash('sha256', $claimToken))) {
-                throw ValidationException::withMessages(['claim_token' => 'Claim token không hợp lệ cho lệnh in này.']);
+                throw ValidationException::withMessages(['claim_token' => 'Mã nhận lệnh không hợp lệ cho lệnh in này.']);
             }
 
             if ($lockedJob->status !== PrintJobStatus::Printing) {
-                throw ValidationException::withMessages(['status' => 'Chỉ lệnh đang in mới có thể gia hạn lease.']);
+                throw ValidationException::withMessages(['status' => 'Chỉ lệnh đang in mới có thể gia hạn thời gian xử lý.']);
             }
 
             $lockedJob->forceFill([

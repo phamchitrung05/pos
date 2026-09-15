@@ -4,7 +4,10 @@ namespace App\Filament\Resources\PrintJobs\Tables;
 
 use App\Enums\PrintJobStatus;
 use App\Enums\PrintType;
+use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Support\Colors\Color;
+use Filament\Support\Enums\IconSize;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -31,7 +34,16 @@ class PrintJobsTable
                 SelectFilter::make('printer')->label('Máy in')->relationship('printer', 'name'),
             ])
             ->recordActions([
-                ViewAction::make(),
+                ViewAction::make()
+                    ->iconButton()
+                    ->tooltip('Xem chi tiết')
+                    ->iconSize(IconSize::Medium)
+                    ->color(Color::Orange),
+                EditAction::make()
+                    ->iconButton()
+                    ->tooltip('Chỉnh sửa')
+                    ->iconSize(IconSize::Medium)
+                    ->color(Color::Orange),
             ])
             ->defaultSort('id', 'desc');
     }

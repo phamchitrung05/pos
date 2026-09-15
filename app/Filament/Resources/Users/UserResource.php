@@ -25,7 +25,13 @@ class UserResource extends Resource
 
     protected static ?string $model = User::class;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Hệ Thống';
+    protected static ?string $modelLabel = 'Tài khoản';
+
+    protected static ?string $pluralModelLabel = 'Tài khoản';
+
+    protected static ?string $navigationLabel = 'Tài khoản';
+
+    protected static string|\UnitEnum|null $navigationGroup = 'Hệ thống';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUser;
 

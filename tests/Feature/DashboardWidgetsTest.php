@@ -50,6 +50,6 @@ class DashboardWidgetsTest extends TestCase
 
         $this->assertFalse(OwnerRevenueOverview::canView());
         $this->assertFalse(OwnerRevenueChart::canView());
-        Livewire::test(OperationsOverview::class)->assertSee('Order đang mở');
+        Livewire::test(OperationsOverview::class)->assertSee('Đơn hàng đang mở');
     }
 }

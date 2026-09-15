@@ -15,7 +15,7 @@ final class OwnerRevenueChart extends ChartWidget
 {
     protected ?string $heading = 'Doanh thu 7 ngày gần nhất';
 
-    protected ?string $description = 'Chỉ bao gồm các payment đã hoàn tất';
+    protected ?string $description = 'Chỉ bao gồm các khoản thanh toán đã hoàn tất';
 
     protected ?string $pollingInterval = '60s';
 

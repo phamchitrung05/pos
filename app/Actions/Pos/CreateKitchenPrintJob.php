@@ -49,13 +49,13 @@ final class CreateKitchenPrintJob
 
             if ($lockedOrder->status !== OrderStatus::Open || $lockedOrder->tableSession?->status !== TableSessionStatus::Open) {
                 throw ValidationException::withMessages([
-                    'order_id' => 'Chỉ order đang phục vụ mới có thể tạo phiếu bếp.',
+                    'order_id' => 'Chỉ đơn hàng đang phục vụ mới có thể tạo phiếu bếp.',
                 ]);
             }
 
             if ((int) $lockedPrinter->store_id !== (int) $lockedOrder->store_id) {
                 throw ValidationException::withMessages([
-                    'printer_id' => 'Máy in bếp không thuộc cùng cửa hàng với order.',
+                    'printer_id' => 'Máy in bếp không thuộc cùng cửa hàng với đơn hàng.',
                 ]);
             }
 
@@ -78,7 +78,7 @@ final class CreateKitchenPrintJob
 
             if ($items->isEmpty()) {
                 throw ValidationException::withMessages([
-                    'items' => 'Order không có món mới cần in cho bếp.',
+                    'items' => 'Đơn hàng không có món mới cần in cho bếp.',
                 ]);
             }
 

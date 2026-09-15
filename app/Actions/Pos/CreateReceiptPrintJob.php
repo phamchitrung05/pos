@@ -42,7 +42,7 @@ final class CreateReceiptPrintJob
             }
 
             if ($lockedPayment->status !== PaymentStatus::Completed) {
-                throw ValidationException::withMessages(['payment_id' => 'Chỉ payment hoàn tất mới được in hóa đơn.']);
+                throw ValidationException::withMessages(['payment_id' => 'Chỉ khoản thanh toán đã hoàn tất mới được in hóa đơn.']);
             }
 
             if ((int) $lockedPrinter->store_id !== (int) $lockedPayment->store_id

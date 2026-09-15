@@ -27,6 +27,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
 use App\Models\Printer;
+use App\Models\PrintJob;
 use App\Models\Product;
 use App\Models\TableSession;
 use App\Models\User;
@@ -442,6 +443,29 @@ class PosWorkflowActionsTest extends TestCase
         $this->assertFalse(OrderItemResource::canCreate());
         $this->assertFalse(PaymentResource::canCreate());
         $this->assertFalse(PrintJobResource::canCreate());
+    }
+
+    /** Owner được sửa dữ liệu đối soát; staff vẫn phải thao tác qua luồng POS chuyên trách. */
+    public function test_only_owner_can_edit_filament_transaction_resources(): void
+    {
+        $records = [
+            TableSessionResource::class => TableSession::query()->firstOrFail(),
+            OrderResource::class => Order::query()->firstOrFail(),
+            OrderItemResource::class => OrderItem::query()->firstOrFail(),
+            PaymentResource::class => Payment::query()->firstOrFail(),
+            PrintJobResource::class => PrintJob::query()->firstOrFail(),
+        ];
+
+        $this->actingAs($this->owner());
+        foreach ($records as $resource => $record) {
+            $this->assertTrue($resource::canEdit($record));
+        }
+
+        $staff = User::query()->where('email', 'staff.tranphu@example.com')->firstOrFail();
+        $this->actingAs($staff);
+        foreach ($records as $resource => $record) {
+            $this->assertFalse($resource::canEdit($record));
+        }
     }
 
     /** Lấy tài khoản owner do seeder cấp toàn bộ quyền để tập trung test invariant nghiệp vụ. */

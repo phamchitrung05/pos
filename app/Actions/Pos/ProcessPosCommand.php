@@ -278,7 +278,7 @@ final class ProcessPosCommand
 
         if (! $matches) {
             throw ValidationException::withMessages([
-                'command_id' => 'UUID command đã được dùng với store, thiết bị, người dùng, loại hoặc payload khác.',
+                'command_id' => 'Mã thao tác đã được dùng với cửa hàng, thiết bị, người dùng, loại hoặc dữ liệu khác.',
             ]);
         }
     }
@@ -292,7 +292,7 @@ final class ProcessPosCommand
                 JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRESERVE_ZERO_FRACTION,
             ));
         } catch (JsonException) {
-            throw ValidationException::withMessages(['payload' => 'Payload command không thể chuẩn hóa thành JSON.']);
+            throw ValidationException::withMessages(['payload' => 'Dữ liệu thao tác không thể chuẩn hóa thành JSON.']);
         }
     }
 
@@ -333,9 +333,9 @@ final class ProcessPosCommand
         }
 
         if ($exception instanceof ModelNotFoundException) {
-            return 'Không tìm thấy dữ liệu thuộc cửa hàng cho command này.';
+            return 'Không tìm thấy dữ liệu thuộc cửa hàng cho thao tác này.';
         }
 
-        return 'Không thể xử lý command do lỗi hệ thống.';
+        return 'Không thể xử lý thao tác do lỗi hệ thống.';
     }
 }

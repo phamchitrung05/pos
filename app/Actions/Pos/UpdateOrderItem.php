@@ -65,7 +65,7 @@ final class UpdateOrderItem
 
             if ((int) $lockedItem->order_id !== (int) $lockedOrder->getKey()) {
                 throw ValidationException::withMessages([
-                    'order_id' => 'Dòng món vừa thay đổi order, vui lòng tải lại trước khi thao tác.',
+                    'order_id' => 'Dòng món vừa chuyển sang đơn hàng khác, vui lòng tải lại trước khi thao tác.',
                 ]);
             }
 
@@ -73,7 +73,7 @@ final class UpdateOrderItem
 
             if ($lockedOrder->status !== OrderStatus::Open || $lockedOrder->tableSession?->status !== TableSessionStatus::Open) {
                 throw ValidationException::withMessages([
-                    'order_id' => 'Không thể sửa món của order đã thanh toán hoặc đã hủy.',
+                    'order_id' => 'Không thể sửa món của đơn hàng đã thanh toán hoặc đã hủy.',
                 ]);
             }
 

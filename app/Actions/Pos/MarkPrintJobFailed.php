@@ -17,7 +17,7 @@ final class MarkPrintJobFailed
             $lockedJob = PrintJob::query()->lockForUpdate()->findOrFail($printJob->getKey());
 
             if (blank($lockedJob->claim_token_hash) || ! hash_equals($lockedJob->claim_token_hash, hash('sha256', $claimToken))) {
-                throw ValidationException::withMessages(['claim_token' => 'Claim token không hợp lệ cho lệnh in này.']);
+                throw ValidationException::withMessages(['claim_token' => 'Mã nhận lệnh không hợp lệ cho lệnh in này.']);
             }
 
             if ($lockedJob->status === PrintJobStatus::Failed) {

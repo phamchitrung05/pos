@@ -8,7 +8,9 @@ use App\Queries\Pos\TableSessionActivityReadModel;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
+use Filament\Support\Colors\Color;
 use Filament\Support\Enums\IconSize;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
@@ -53,11 +55,11 @@ class TableSessionsTable
             ])
             ->recordActions([
                 Action::make('view')
-                    ->label('')
+                    ->iconButton()
                     ->tooltip('Xem chi tiết')
                     ->icon(Heroicon::OutlinedEye)
-                    ->iconSize(IconSize::Small)
-                    ->color('primary')
+                    ->iconSize(IconSize::Medium)
+                    ->color(Color::Orange)
                     ->modalHeading('')
                     ->modalWidth('7xl')
                     ->modalContent(function (TableSession $record) {
@@ -71,6 +73,11 @@ class TableSessionsTable
                     })
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Đóng'),
+                EditAction::make()
+                    ->iconButton()
+                    ->tooltip('Chỉnh sửa')
+                    ->iconSize(IconSize::Medium)
+                    ->color(Color::Orange),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

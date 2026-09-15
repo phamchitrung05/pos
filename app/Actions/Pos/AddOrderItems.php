@@ -62,7 +62,7 @@ final class AddOrderItems
 
             if ($lockedOrder->status !== OrderStatus::Open || $lockedOrder->tableSession?->status !== TableSessionStatus::Open) {
                 throw ValidationException::withMessages([
-                    'order_id' => 'Chỉ có thể thêm món vào order của một phiên bàn đang mở.',
+                    'order_id' => 'Chỉ có thể thêm món vào đơn hàng của một phiên bàn đang mở.',
                 ]);
             }
 
@@ -79,7 +79,7 @@ final class AddOrderItems
 
                 if (! $product || (int) $product->store_id !== (int) $lockedOrder->store_id || ! $product->is_active) {
                     throw ValidationException::withMessages([
-                        "items.{$index}.product_id" => 'Sản phẩm không tồn tại, đã ngừng bán hoặc không thuộc cửa hàng của order.',
+                        "items.{$index}.product_id" => 'Sản phẩm không tồn tại, đã ngừng bán hoặc không thuộc cửa hàng của đơn hàng.',
                     ]);
                 }
 

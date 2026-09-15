@@ -2,9 +2,12 @@
 
 namespace App\Filament\Resources\Orders\Tables;
 
+use App\Models\Order;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
+use Filament\Support\Colors\Color;
+use Filament\Support\Enums\IconSize;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -25,7 +28,17 @@ class OrdersTable
                 //
             ])
             ->recordActions([
-                EditAction::make(),
+                ViewAction::make()
+                    ->iconButton()
+                    ->tooltip('Xem chi tiết')
+                    ->iconSize(IconSize::Medium)
+                    ->color(Color::Orange)
+                    ->modalHeading('Chi tiết đơn hàng')
+                    ->modalWidth('7xl')
+                    ->modalContent(fn (Order $record) => view('filament.resources.orders.view-modal', [
+                        'record' => $record,
+                    ]))
+                    ->schema([]),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

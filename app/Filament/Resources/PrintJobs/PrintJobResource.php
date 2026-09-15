@@ -22,7 +22,13 @@ class PrintJobResource extends Resource
 
     protected static ?string $model = PrintJob::class;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Print';
+    protected static ?string $modelLabel = 'Lệnh in';
+
+    protected static ?string $pluralModelLabel = 'Lệnh in';
+
+    protected static ?string $navigationLabel = 'Lệnh in';
+
+    protected static string|\UnitEnum|null $navigationGroup = 'In ấn';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClipboardDocumentList;
 

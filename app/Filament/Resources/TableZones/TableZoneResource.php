@@ -21,7 +21,13 @@ class TableZoneResource extends Resource
 
     protected static ?string $model = TableZone::class;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Store';
+    protected static ?string $modelLabel = 'Khu vực bàn';
+
+    protected static ?string $pluralModelLabel = 'Khu vực bàn';
+
+    protected static ?string $navigationLabel = 'Khu vực bàn';
+
+    protected static string|\UnitEnum|null $navigationGroup = 'Cửa hàng';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedSquares2x2;
 

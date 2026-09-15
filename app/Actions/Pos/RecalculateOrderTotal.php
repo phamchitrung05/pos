@@ -25,7 +25,7 @@ final class RecalculateOrderTotal
 
         if ((float) $total > 99_999_999.99) {
             throw ValidationException::withMessages([
-                'total' => 'Tổng tiền order vượt quá giới hạn lưu trữ 99.999.999,99.',
+                'total' => 'Tổng tiền đơn hàng vượt quá giới hạn lưu trữ 99.999.999,99.',
             ]);
         }
 
