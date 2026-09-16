@@ -8,7 +8,7 @@
         </span>
     </div>
 
-    <div class="scroll-none mt-4 overflow-x-auto rounded-xl border border-gray-200 dark:border-white/10">
+    <div class="scroll-none mt-4 overflow-x-auto rounded-xl border border-gray-200 dark:border-white/10 lg:h-[calc(100dvh-55rem)] h-[calc(100dvh-21rem)]">
         <table class="w-full min-w-[640px] border-collapse text-left text-sm">
             <thead class="sticky top-0 z-10 bg-primary-50 text-gray-600 dark:bg-primary-950/30 dark:text-gray-300">
                 <tr>

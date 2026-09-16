@@ -26,7 +26,7 @@
     x-on:table-modal-loaded.window="loading = false"
     @class([
         'relative flex flex-col bg-white text-[#0f1f3d]',
-        'max-h-[92vh] min-h-[420px] overflow-hidden rounded-2xl' => ! $isReadOnly,
+        'max-h-[92dvh] min-h-[420px] overflow-hidden rounded-2xl' => ! $isReadOnly,
     ])
 >
     <div x-show="loading" x-cloak class="absolute inset-0 z-50 flex items-center justify-center bg-white/95 backdrop-blur-sm">
@@ -131,10 +131,11 @@
             </aside>
 
             <section @class([
-                'flex min-h-0 min-w-0 flex-1 flex-col rounded-xl border border-slate-200',
+                'flex min-h-0 min-w-0 flex-1 flex-col
+                        overflow-hidden rounded-xl border border-slate-200',
                 'overflow-hidden' => ! $isReadOnly,
             ])>
-                <div class="flex shrink-0 overflow-x-auto border-b border-slate-200 bg-white scroll-none">
+                <div class="flex shrink-0 overflow-x-auto border-b border-slate-200 scroll-none">
                     @foreach (['orders' => 'Danh sách món', 'info' => 'Thông tin khác', 'history' => 'Lịch sử'] as $tabKey => $tabLabel)
                         <button
                             type="button"
