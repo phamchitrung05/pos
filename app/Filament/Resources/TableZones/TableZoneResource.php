@@ -2,8 +2,6 @@
 
 namespace App\Filament\Resources\TableZones;
 
-use App\Filament\Resources\TableZones\Pages\CreateTableZone;
-use App\Filament\Resources\TableZones\Pages\EditTableZone;
 use App\Filament\Resources\TableZones\Pages\ListTableZones;
 use App\Filament\Resources\TableZones\Schemas\TableZoneForm;
 use App\Filament\Resources\TableZones\Tables\TableZonesTable;
@@ -52,8 +50,6 @@ class TableZoneResource extends Resource
     {
         return [
             'index' => ListTableZones::route('/'),
-            'create' => CreateTableZone::route('/create'),
-            'edit' => EditTableZone::route('/{record}/edit'),
         ];
     }
 }

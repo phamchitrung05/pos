@@ -2,8 +2,6 @@
 
 namespace App\Filament\Resources\ProductGroups;
 
-use App\Filament\Resources\ProductGroups\Pages\CreateProductGroup;
-use App\Filament\Resources\ProductGroups\Pages\EditProductGroup;
 use App\Filament\Resources\ProductGroups\Pages\ListProductGroups;
 use App\Filament\Resources\ProductGroups\Schemas\ProductGroupForm;
 use App\Filament\Resources\ProductGroups\Tables\ProductGroupsTable;
@@ -52,8 +50,6 @@ class ProductGroupResource extends Resource
     {
         return [
             'index' => ListProductGroups::route('/'),
-            'create' => CreateProductGroup::route('/create'),
-            'edit' => EditProductGroup::route('/{record}/edit'),
         ];
     }
 }

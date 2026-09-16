@@ -4,10 +4,19 @@ namespace Tests\Feature;
 
 use App\Enums\UserRole;
 use App\Filament\Resources\OrderItems\OrderItemResource;
+use App\Filament\Resources\Orders\OrderResource;
 use App\Filament\Resources\Orders\Pages\ListOrders;
 use App\Filament\Resources\Payments\Pages\ListPayments;
+use App\Filament\Resources\Payments\PaymentResource;
+use App\Filament\Resources\ProductGroups\Pages\ListProductGroups;
+use App\Filament\Resources\ProductGroups\ProductGroupResource;
+use App\Filament\Resources\Products\Pages\ListProducts;
 use App\Filament\Resources\Products\ProductResource;
+use App\Filament\Resources\Stores\Pages\ListStores;
 use App\Filament\Resources\Stores\StoreResource;
+use App\Filament\Resources\TableSessions\Pages\ListTableSessions;
+use App\Filament\Resources\TableZones\Pages\ListTableZones;
+use App\Filament\Resources\TableZones\TableZoneResource;
 use App\Filament\Resources\Users\Pages\CreateUser;
 use App\Filament\Resources\Users\UserResource;
 use App\Models\DiningTable;
@@ -24,6 +33,7 @@ use App\Models\TableZone;
 use App\Models\User;
 use App\Queries\Pos\TableMapReadModel;
 use App\Queries\Pos\TableSessionActivityReadModel;
+use App\Queries\Pos\TableSessionDetailReadModel;
 use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -145,6 +155,143 @@ class StoreTenancyAuthorizationTest extends TestCase
         $this->assertStringContainsString($order->code, $modalHtml);
         $this->assertStringContainsString('Nhật ký thao tác', $modalHtml);
         $this->assertStringNotContainsString('Thêm món', $modalHtml);
+        $this->assertStringNotContainsString('overflow-y-auto', $modalHtml);
+    }
+
+    /** Danh mục tạo bằng modal, còn giao dịch POS không được tạo trực tiếp từ Resource. */
+    public function test_catalog_create_actions_use_modals_and_transaction_create_actions_are_absent(): void
+    {
+        $owner = $this->owner();
+        $store = Store::query()->firstOrFail();
+
+        $this->actingAs($owner);
+        Filament::setCurrentPanel('admin');
+        Filament::setTenant($store, isQuiet: true);
+
+        Livewire::test(ListTableZones::class)
+            ->assertActionExists('create')
+            ->mountAction('create')
+            ->assertActionMounted('create')
+            ->assertMountedActionModalSee('Tên khu vực')
+            ->fillForm(['name' => 'Khu vực tạo từ modal'])
+            ->callMountedAction()
+            ->assertHasNoFormErrors();
+
+        Livewire::test(ListProductGroups::class)
+            ->assertActionExists('create')
+            ->mountAction('create')
+            ->assertActionMounted('create')
+            ->assertMountedActionModalSee('Tên nhóm')
+            ->fillForm(['name' => 'Nhóm tạo từ modal'])
+            ->callMountedAction()
+            ->assertHasNoFormErrors();
+
+        Livewire::test(ListStores::class)
+            ->assertActionExists('create')
+            ->mountAction('create')
+            ->assertActionMounted('create')
+            ->assertMountedActionModalSee('Tên chi nhánh')
+            ->fillForm(['name' => 'Chi nhánh tạo từ modal'])
+            ->callMountedAction()
+            ->assertHasNoFormErrors();
+
+        $this->assertDatabaseHas('table_zones', [
+            'store_id' => $store->id,
+            'name' => 'Khu vực tạo từ modal',
+        ]);
+        $this->assertDatabaseHas('product_group', [
+            'store_id' => $store->id,
+            'name' => 'Nhóm tạo từ modal',
+        ]);
+        $this->assertDatabaseHas('store', ['name' => 'Chi nhánh tạo từ modal']);
+
+        Livewire::test(ListOrders::class)->assertActionDoesNotExist('create');
+        Livewire::test(ListPayments::class)->assertActionDoesNotExist('create');
+
+        foreach ([
+            TableZoneResource::class,
+            ProductGroupResource::class,
+            StoreResource::class,
+            OrderResource::class,
+            PaymentResource::class,
+        ] as $resource) {
+            $this->assertArrayNotHasKey('create', $resource::getPages());
+        }
+
+        $this->assertFalse(OrderResource::canCreate());
+        $this->assertFalse(PaymentResource::canCreate());
+    }
+
+    /** Bốn danh mục chính chỉnh sửa trong modal thay vì điều hướng sang page riêng. */
+    public function test_catalog_edit_actions_use_modals(): void
+    {
+        $owner = $this->owner();
+        $store = Store::query()->firstOrFail();
+        $zone = TableZone::query()->where('store_id', $store->id)->firstOrFail();
+        $group = ProductGroup::query()->where('store_id', $store->id)->firstOrFail();
+        $product = Product::query()->where('store_id', $store->id)->firstOrFail();
+
+        $this->actingAs($owner);
+        Filament::setCurrentPanel('admin');
+        Filament::setTenant($store, isQuiet: true);
+
+        Livewire::test(ListTableZones::class)
+            ->mountTableAction('edit', $zone->getKey())
+            ->assertActionMounted(TestAction::make('edit')->table($zone))
+            ->assertMountedActionModalSee('Tên khu vực');
+
+        Livewire::test(ListProductGroups::class)
+            ->mountTableAction('edit', $group->getKey())
+            ->assertActionMounted(TestAction::make('edit')->table($group))
+            ->assertMountedActionModalSee('Tên nhóm');
+
+        Livewire::test(ListProducts::class)
+            ->mountTableAction('edit', $product->getKey())
+            ->assertActionMounted(TestAction::make('edit')->table($product))
+            ->assertMountedActionModalSee('Tên món');
+
+        Livewire::test(ListStores::class)
+            ->mountTableAction('edit', $store->getKey())
+            ->assertActionMounted(TestAction::make('edit')->table($store))
+            ->assertMountedActionModalSee('Tên chi nhánh');
+
+        foreach ([
+            TableZoneResource::class,
+            ProductGroupResource::class,
+            ProductResource::class,
+            StoreResource::class,
+        ] as $resource) {
+            $this->assertArrayNotHasKey('edit', $resource::getPages());
+        }
+    }
+
+    /** Modal phiên bàn dùng ViewAction và shell có một vùng cuộn nội dung rõ ràng. */
+    public function test_table_session_view_modal_uses_the_detail_layout(): void
+    {
+        $owner = $this->owner();
+        $store = Store::query()->firstOrFail();
+        $session = TableSession::query()
+            ->where('store_id', $store->getKey())
+            ->with('table')
+            ->firstOrFail();
+
+        $this->actingAs($owner);
+        Filament::setTenant($store, isQuiet: true);
+
+        Livewire::test(ListTableSessions::class)
+            ->assertTableActionExists('view')
+            ->assertTableActionDoesNotExist('edit')
+            ->mountTableAction('view', $session->getKey())
+            ->assertActionMounted(TestAction::make('view')->table($session));
+
+        $details = app(TableSessionDetailReadModel::class)->for($session);
+        $modalHtml = view('filament.resources.table-sessions.view-modal', [
+            'details' => $details,
+        ])->render();
+
+        $this->assertSame($session->table->name, $details['table_name']);
+        $this->assertStringNotContainsString('overflow-y-auto', $modalHtml);
+        $this->assertStringContainsString('Nhật ký thao tác', $modalHtml);
     }
 
     /** Middleware Filament phải trả 404 khi staff đoán tenant ID trên URL. */

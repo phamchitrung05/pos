@@ -24,7 +24,10 @@
         loadingTable = $event.detail;
     "
     x-on:table-modal-loaded.window="loading = false"
-    class="relative flex max-h-[92vh] min-h-[420px] flex-col overflow-hidden rounded-2xl bg-white text-[#0f1f3d]"
+    @class([
+        'relative flex flex-col bg-white text-[#0f1f3d]',
+        'max-h-[92vh] min-h-[420px] overflow-hidden rounded-2xl' => ! $isReadOnly,
+    ])
 >
     <div x-show="loading" x-cloak class="absolute inset-0 z-50 flex items-center justify-center bg-white/95 backdrop-blur-sm">
         <div class="text-center">
@@ -38,36 +41,37 @@
     </div>
 
     @if ($selectedTable)
-        <header class="flex h-[68px] shrink-0 items-center justify-between border-b border-slate-200 px-5 sm:px-6">
-            <div class="flex min-w-0 items-center gap-3">
-                <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
-                    <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 9h14v4H5V9Zm2 4v6m10-6v6M7 9V6h10v3" />
-                    </svg>
+        @if (! $isReadOnly)
+            <header class="flex h-[68px] shrink-0 items-center justify-between border-b border-slate-200 px-5 sm:px-6">
+                <div class="flex min-w-0 items-center gap-3">
+                    <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
+                        <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 9h14v4H5V9Zm2 4v6m10-6v6M7 9V6h10v3" />
+                        </svg>
+                    </div>
+                    <h2 class="truncate text-[22px] font-bold tracking-[-0.02em] text-slate-950 sm:text-[25px]">
+                        Chi tiết {{ $selectedTable['name'] }}
+                    </h2>
                 </div>
-                <h2 class="truncate text-[22px] font-bold tracking-[-0.02em] text-slate-950 sm:text-[25px]">
-                    Chi tiết {{ $selectedTable['name'] }}
-                </h2>
-            </div>
 
-            <button
-                type="button"
-                @if ($isReadOnly)
-                    wire:click="unmountAction"
-                @else
+                <button
+                    type="button"
                     wire:click="closeTableDetails"
                     x-on:click="$dispatch('close-modal', { id: 'table-details' })"
-                @endif
-                class="flex size-10 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
-                aria-label="Đóng chi tiết bàn"
-            >
-                <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-width="1.8" d="M6 18 18 6M6 6l12 12" />
-                </svg>
-            </button>
-        </header>
+                    class="flex size-10 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+                    aria-label="Đóng chi tiết bàn"
+                >
+                    <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-width="1.8" d="M6 18 18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </header>
+        @endif
 
-        <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 lg:flex-row">
+        <div @class([
+            'flex flex-col gap-4 p-4 lg:flex-row',
+            'min-h-0 flex-1 overflow-y-auto' => ! $isReadOnly,
+        ])>
             <aside class="flex w-full shrink-0 flex-col gap-3 lg:w-[230px]">
                 <div @class([
                     'flex h-[150px] flex-col items-center justify-center rounded-xl text-white',
@@ -126,14 +130,17 @@
                 </div>
             </aside>
 
-            <section class="flex min-h-[420px] min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-200">
+            <section @class([
+                'flex min-h-0 min-w-0 flex-1 flex-col rounded-xl border border-slate-200',
+                'overflow-hidden' => ! $isReadOnly,
+            ])>
                 <div class="flex shrink-0 overflow-x-auto border-b border-slate-200 bg-white scroll-none">
                     @foreach (['orders' => 'Danh sách món', 'info' => 'Thông tin khác', 'history' => 'Lịch sử'] as $tabKey => $tabLabel)
                         <button
                             type="button"
                             x-on:click="tab = '{{ $tabKey }}'"
                             x-bind:class="tab === '{{ $tabKey }}' ? 'font-semibold text-orange-600 after:absolute after:bottom-0 after:left-3 after:right-3 after:h-[3px] after:rounded-full after:bg-orange-500' : 'text-slate-500 hover:text-slate-900'"
-                            class="relative flex h-14 min-w-[130px] flex-1 items-center justify-center gap-2 whitespace-nowrap px-3 text-[13px] transition sm:text-[14px]"
+                            class="relative flex h-14 flex-1 items-center justify-center gap-2 whitespace-nowrap px-3 text-[13px] transition sm:text-[14px]"
                         >
                             @if ($tabKey === 'orders')
                                 <svg class="size-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-width="1.8" d="M6 3h12v18H6V3Zm3 5h6M9 12h6M9 16h4" /></svg>
@@ -149,7 +156,10 @@
                     @endforeach
                 </div>
 
-                <div class="min-h-0 flex-1 overflow-y-auto bg-white p-4 sm:p-5 scroll-none">
+                <div @class([
+                    'bg-white p-4 sm:p-5',
+                    'min-h-0 flex-1 overflow-y-auto scroll-none' => ! $isReadOnly,
+                ])>
                     @include('filament.pages.pos.tab.orders')
                     @include('filament.pages.pos.tab.info')
                     @include('filament.pages.pos.tab.history')

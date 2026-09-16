@@ -2,8 +2,6 @@
 
 namespace App\Filament\Resources\Stores;
 
-use App\Filament\Resources\Stores\Pages\CreateStore;
-use App\Filament\Resources\Stores\Pages\EditStore;
 use App\Filament\Resources\Stores\Pages\ListStores;
 use App\Filament\Resources\Stores\Schemas\StoreForm;
 use App\Filament\Resources\Stores\Tables\StoresTable;
@@ -53,8 +51,6 @@ class StoreResource extends Resource
     {
         return [
             'index' => ListStores::route('/'),
-            'create' => CreateStore::route('/create'),
-            'edit' => EditStore::route('/{record}/edit'),
         ];
     }
 }

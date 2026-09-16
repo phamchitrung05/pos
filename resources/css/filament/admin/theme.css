@@ -1,4 +1,4 @@
-@import '@fontsource-variable/baloo-2';
+@import '@fontsource-variable/inter';
 @import '../../../../vendor/filament/filament/resources/css/theme.css';
 
 @source '../../../../app/Filament/**/*';
@@ -11,41 +11,21 @@ html.fi button,
 html.fi input,
 html.fi select,
 html.fi textarea {
-    font-family: 'Baloo 2', 'Baloo 2 Variable', ui-sans-serif, system-ui, sans-serif !important;
+    font-family: 'Inter Variable', 'Inter', ui-sans-serif, system-ui, sans-serif !important;
 }
 
-.fi-sidebar-item-label {
-    font-size: 1rem;
-    line-height: 1.5rem;
-}
-
-.fi-sidebar-group-label {
-    font-size: 0.9375rem;
-}
 
 .scroll-none {
     scrollbar-width: none;
     -ms-overflow-style: none;
 }
 
-
-.order-view-modal-window {
-    --modal-max-h: 750px;   /* chiều cao tối đa "list thường" */
-    --modal-gap: 2rem;      /* khoảng chừa trên/dưới */
-
-    height: min(var(--modal-max-h), calc(100dvh - var(--modal-gap)));
-    max-height: calc(100dvh - var(--modal-gap));
-    overflow: auto;
+.fi-modal-heading {
+    font-size: 1.75rem;
+    line-height: 2.125rem;
 }
 
-.order-view-modal-window.s960{
-    --modal-max-h: 960px;
-}
-
-.order-view-modal-window.s950 {
-    --modal-max-h: 950px;
-}
-
-.order-view-modal-window.s735{
-    --modal-max-h: 735px;
+.height-modal-custom {
+    max-height: calc(100dvh - 2rem);
+    overflow: hidden;
 }

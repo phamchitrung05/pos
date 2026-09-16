@@ -16,7 +16,7 @@
         @endif
         <style>
             html, body, button, input, select, textarea {
-                font-family: 'Baloo 2', 'Baloo 2 Variable', ui-sans-serif, system-ui, sans-serif !important;
+                font-family: 'Inter Variable', 'Inter', ui-sans-serif, system-ui, sans-serif !important;
             }
         </style>
     </head>

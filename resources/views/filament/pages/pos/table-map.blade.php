@@ -16,7 +16,7 @@
         width="7xl"
         teleport="body"
         :extra-modal-window-attribute-bag="new \Filament\Support\View\ComponentAttributeBag([
-            'class' => 'w-full order-view-modal-window s950 scroll-none',
+            'class' => 'height-modal-custom',
         ])"
     >
         @include('filament.pages.pos.table-modal')

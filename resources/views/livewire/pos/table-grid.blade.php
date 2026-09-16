@@ -136,7 +136,7 @@
                         </button>
                     </div>
                 </section>
-                <div class="h-[calc(100dvh-30rem)] overflow-auto scroll-none">
+                <div class="lg:h-[calc(100dvh-30rem)] h-[calc(100dvh-13rem)]  overflow-auto scroll-none">
                     <section wire:loading.class="opacity-60">
                         @forelse ($tableMap['groups'] as $group)
                             <section

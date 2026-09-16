@@ -35,9 +35,8 @@ class OrdersTable
                     ->tooltip('Xem chi tiết')
                     ->size(Size::Medium)
                     ->color(Color::Orange)
-                    ->modalHeading('')
+                    ->modalHeading('Chi tiết Order')
                     ->modalWidth('7xl')
-                    ->extraModalWindowAttributes(['class' => 'order-view-modal-window s735 scroll-none'])
                     ->modalContent(function (Order $record) {
                         $selectedTable = app(TableMapReadModel::class)->orderDetails($record);
                         $events = $record->tableSession
@@ -49,7 +48,9 @@ class OrdersTable
                             'events' => $events,
                         ]);
                     })
-                    ->modalCancelActionLabel("Đóng")
+                    ->stickyModalHeader()
+                    ->stickyModalFooter()
+                    ->modalCancelActionLabel('Đóng')
                     ->schema([]),
             ])
             ->toolbarActions([

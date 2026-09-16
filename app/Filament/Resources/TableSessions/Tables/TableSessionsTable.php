@@ -4,10 +4,10 @@ namespace App\Filament\Resources\TableSessions\Tables;
 
 use App\Enums\TableSessionStatus;
 use App\Models\TableSession;
-use App\Queries\Pos\TableSessionActivityReadModel;
-use Filament\Actions\Action;
+use App\Queries\Pos\TableSessionDetailReadModel;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Support\Colors\Color;
 use Filament\Support\Enums\Size;
@@ -53,27 +53,24 @@ class TableSessionsTable
                     }),
             ])
             ->recordActions([
-                Action::make('view')
+                ViewAction::make()
                     ->iconButton()
                     ->tooltip('Xem chi tiết')
                     ->icon(Heroicon::OutlinedEye)
                     ->size(Size::Medium)
                     ->color(Color::Orange)
-                    ->modalHeading('')
+                    ->modalHeading('Lịch sử phiên bàn')
+                    ->modalDescription('Thông tin tổng quan và nhật ký thao tác của phiên bàn.')
+                    ->modalIcon(Heroicon::OutlinedClock)
+                    ->modalIconColor('primary')
                     ->modalWidth('7xl')
-
-                    ->extraModalWindowAttributes(['class' => 'order-view-modal-window s960'])
-                    ->modalContent(function (TableSession $record) {
-                        $record->load(['table.zone', 'openedBy', 'order.items', 'order.payments']);
-                        $events = app(TableSessionActivityReadModel::class)->for($record);
-
-                        return view('filament.resources.table-sessions.view-modal', [
-                            'record' => $record,
-                            'events' => $events,
-                        ]);
-                    })
-                    ->modalSubmitAction(false)
-                    ->modalCancelActionLabel('Đóng'),
+                    ->modalContent(fn (TableSession $record) => view('filament.resources.table-sessions.view-modal', [
+                        'details' => app(TableSessionDetailReadModel::class)->for($record),
+                    ]))
+                    ->stickyModalHeader()
+                    ->stickyModalFooter()
+                    ->modalCancelActionLabel('Đóng')
+                    ->schema([]),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
