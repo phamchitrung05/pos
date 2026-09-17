@@ -2,16 +2,21 @@
 
 namespace App\Filament\Resources\Orders\Tables;
 
+use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Queries\Pos\TableMapReadModel;
 use App\Queries\Pos\TableSessionActivityReadModel;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\DatePicker;
 use Filament\Support\Colors\Color;
 use Filament\Support\Enums\Size;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class OrdersTable
 {
@@ -27,7 +32,25 @@ class OrdersTable
                 TextColumn::make('created_at')->label('Thời gian')->dateTime('d/m/Y H:i')->sortable(),
             ])
             ->filters([
-                //
+                SelectFilter::make('status')
+                    ->label('Trạng thái')
+                    ->options(OrderStatus::class)
+                    ->native(false),
+                Filter::make('created_at')
+                    ->label('Khoảng ngày tạo đơn')
+                    ->form([
+                        DatePicker::make('from')->label('Từ ngày'),
+                        DatePicker::make('until')->label('Đến ngày'),
+                    ])
+                    ->default([
+                        'from' => today()->toDateString(),
+                        'until' => today()->toDateString(),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when($data['from'] ?? null, fn (Builder $query, string $date): Builder => $query->whereDate('created_at', '>=', $date))
+                            ->when($data['until'] ?? null, fn (Builder $query, string $date): Builder => $query->whereDate('created_at', '<=', $date));
+                    }),
             ])
             ->recordActions([
                 ViewAction::make()
