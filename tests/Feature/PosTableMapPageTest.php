@@ -54,6 +54,7 @@ class PosTableMapPageTest extends TestCase
         $this->assertCount($tableMap['statistics']['total'], $tableMap['tables']);
         $this->assertNotEmpty($pageData['catalog']);
         $this->assertNotEmpty($pageData['kitchenPrinters']);
+        $this->assertCount(0, $pageData['events']);
     }
 
     /** Page cha xác thực bàn, cập nhật state rồi yêu cầu Filament mở modal chi tiết. */
@@ -69,6 +70,7 @@ class PosTableMapPageTest extends TestCase
             ->call('selectTable', $table->id)
             ->assertSet('selectedTableId', $table->id)
             ->assertDispatched('open-modal', id: 'table-details')
+            ->assertSeeHtml('data-order-view-mobile')
             ->assertSeeHtml('id="table-details"');
     }
 

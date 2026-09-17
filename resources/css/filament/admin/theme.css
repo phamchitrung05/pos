@@ -5,6 +5,10 @@
 @source '../../../../resources/views/filament/**/*';
 @source '../../../../resources/views/livewire/**/*';
 
+@theme {
+    --color-cream: #fff7ed;
+}
+
 html.fi,
 html.fi body,
 html.fi button,
@@ -28,4 +32,11 @@ html.fi textarea {
 .height-modal-custom {
     max-height: calc(100dvh - 2rem);
     overflow: hidden;
+}
+
+.table-map .table-map-modal-height{
+    height: 92dvh;
+}
+.table-map .table-map-modal-mt-4{
+    margin-top: calc(var(--spacing) * 4);
 }

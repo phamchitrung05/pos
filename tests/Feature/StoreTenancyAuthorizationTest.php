@@ -146,16 +146,24 @@ class StoreTenancyAuthorizationTest extends TestCase
             ->assertTableActionDoesNotExist('edit')
             ->assertTableColumnStateSet('order.code', $payment->order->code, $payment);
 
-        $modalHtml = view('filament.resources.orders.view-modal', [
-            'selectedTable' => app(TableMapReadModel::class)->orderDetails($order),
-            'events' => app(TableSessionActivityReadModel::class)->for($order->tableSession),
-        ])->render();
+        $selectedTable = app(TableMapReadModel::class)->orderDetails($order);
+        $events = app(TableSessionActivityReadModel::class)->for($order->tableSession);
+        $modalData = compact('selectedTable', 'events');
+        $modalHtml = view('filament.resources.orders.view-modal', $modalData)->render();
+        $mobileModalHtml = view('filament.resources.orders.view-modal-mobile', $modalData)->render();
 
         $this->assertStringContainsString('Danh sách món', $modalHtml);
         $this->assertStringContainsString($order->code, $modalHtml);
         $this->assertStringContainsString('Nhật ký thao tác', $modalHtml);
         $this->assertStringNotContainsString('Thêm món', $modalHtml);
-        $this->assertStringNotContainsString('overflow-y-auto', $modalHtml);
+        $this->assertStringContainsString('data-order-view-mobile', $modalHtml);
+        $this->assertStringContainsString("x-on:click=\"tab = 'history'\"", $modalHtml);
+        $this->assertStringContainsString($selectedTable['name'], $mobileModalHtml);
+        $this->assertStringContainsString($selectedTable['zone']['name'], $mobileModalHtml);
+        $this->assertStringContainsString($order->code, $mobileModalHtml);
+        $this->assertStringContainsString($selectedTable['order']['items'][0]['name'], $mobileModalHtml);
+        $this->assertStringContainsString($selectedTable['order']['totalLabel'], $mobileModalHtml);
+        $this->assertStringNotContainsString('ORD-091526-001', $mobileModalHtml);
     }
 
     /** Danh mục tạo bằng modal, còn giao dịch POS không được tạo trực tiếp từ Resource. */

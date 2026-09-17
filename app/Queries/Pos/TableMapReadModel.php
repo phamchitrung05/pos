@@ -195,6 +195,8 @@ final class TableMapReadModel
                 'statusLabel' => $session->status === TableSessionStatus::Open ? 'Đang có khách' : $session->status->getLabel(),
                 'startTime' => $session->start_time?->toIso8601String(),
                 'startTimeLabel' => $session->start_time?->format('H:i - d/m/Y'),
+                'startClockLabel' => $session->start_time?->format('H:i'),
+                'startDateLabel' => $session->start_time?->format('d/m/Y'),
                 'elapsedSeconds' => $elapsedSeconds,
                 'elapsedLabel' => sprintf('%02d:%02d', intdiv($elapsedSeconds, 3600), intdiv($elapsedSeconds % 3600, 60)),
                 'elapsedFullLabel' => sprintf('%02d:%02d:%02d', intdiv($elapsedSeconds, 3600), intdiv($elapsedSeconds % 3600, 60), $elapsedSeconds % 60),

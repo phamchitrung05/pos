@@ -19,6 +19,7 @@ use App\Models\Store;
 use App\Models\TableSession;
 use App\Models\User;
 use App\Queries\Pos\TableMapReadModel;
+use App\Queries\Pos\TableSessionActivityReadModel;
 use BackedEnum;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
@@ -110,7 +111,10 @@ class TableMap extends Page
     protected function getViewData(): array
     {
         return [
-            'tableMap' => $this->buildTableMapData(app(TableMapReadModel::class)),
+            'tableMap' => $this->buildTableMapData(
+                app(TableMapReadModel::class),
+                app(TableSessionActivityReadModel::class),
+            ),
         ];
     }
 
@@ -119,13 +123,21 @@ class TableMap extends Page
      *
      * @return array<string, mixed>
      */
-    private function buildTableMapData(TableMapReadModel $readModel): array
-    {
+    private function buildTableMapData(
+        TableMapReadModel $readModel,
+        TableSessionActivityReadModel $activityReadModel,
+    ): array {
         $store = $this->currentStore();
+        $selectedTable = $readModel->selectedTable($store, $this->selectedTableId);
+        $sessionId = data_get($selectedTable, 'session.id');
+        $session = $sessionId
+            ? TableSession::query()->where('store_id', $store->getKey())->find($sessionId)
+            : null;
 
         return [
             'storeId' => (int) $store->getKey(),
-            'selectedTable' => $readModel->selectedTable($store, $this->selectedTableId),
+            'selectedTable' => $selectedTable,
+            'events' => $session ? $activityReadModel->for($session) : collect(),
             'catalog' => $readModel->catalog($store),
             'kitchenPrinters' => $readModel->kitchenPrinters($store),
             'refreshedAt' => now()->toIso8601String(),

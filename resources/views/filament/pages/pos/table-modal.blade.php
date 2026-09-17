@@ -144,13 +144,13 @@
                             class="relative flex h-14 flex-1 items-center justify-center gap-2 whitespace-nowrap px-3 text-[13px] transition sm:text-[14px]"
                         >
                             @if ($tabKey === 'orders')
-                                <svg class="size-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-width="1.8" d="M6 3h12v18H6V3Zm3 5h6M9 12h6M9 16h4" /></svg>
+                                <x-heroicon-o-list-bullet class="size-[18px]" />
                                 {{ $tabLabel }} ({{ $orderItemCount }})
                             @elseif ($tabKey === 'info')
-                                <svg class="size-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 3h12v18H6V3Zm3 5h6M9 12h6M9 16h4" /></svg>
+                                <x-heroicon-o-information-circle class="size-[18px]" />
                                 {{ $tabLabel }}
                             @else
-                                <svg class="size-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                                <x-heroicon-o-clock class="size-[18px]" />
                                 {{ $tabLabel }}
                             @endif
                         </button>

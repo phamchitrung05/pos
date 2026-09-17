@@ -2,6 +2,7 @@
     @php
         // Page cha chỉ chuẩn bị dữ liệu cho modal; grid có read model và state riêng.
         $selectedTable = $tableMap['selectedTable'];
+        $events = $tableMap['events'];
     @endphp
 
     <div class="fi-section-content flex h-full min-h-0 flex-col overflow-hidden bg-[#fbfaf8] text-slate-900">
@@ -16,9 +17,15 @@
         width="7xl"
         teleport="body"
         :extra-modal-window-attribute-bag="new \Filament\Support\View\ComponentAttributeBag([
-            'class' => 'height-modal-custom',
+            'class' => 'height-modal-custom table-map',
         ])"
     >
-        @include('filament.pages.pos.table-modal')
+        <div class="hidden lg:block">
+            @include('filament.pages.pos.table-modal')
+        </div>
+
+        <div class="lg:hidden">
+            @include('filament.resources.orders.view-modal-mobile')
+        </div>
     </x-filament::modal>
 </x-filament-panels::page>
