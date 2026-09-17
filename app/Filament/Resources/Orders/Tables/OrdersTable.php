@@ -31,6 +31,7 @@ class OrdersTable
                 TextColumn::make('total')->label('Tổng tiền')->money('VND')->sortable(),
                 TextColumn::make('created_at')->label('Thời gian')->dateTime('d/m/Y H:i')->sortable(),
             ])
+            ->defaultSort('created_at', 'desc')
             ->filters([
                 SelectFilter::make('status')
                     ->label('Trạng thái')
