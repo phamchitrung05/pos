@@ -4,12 +4,14 @@ namespace Tests\Feature;
 
 use App\Enums\OrderStatus;
 use App\Enums\PosCommandStatus;
+use App\Enums\PosCommandType;
 use App\Enums\PrinterType;
 use App\Enums\PrintJobStatus;
 use App\Enums\PrintType;
 use App\Enums\TableSessionStatus;
 use App\Models\DiningTable;
 use App\Models\Order;
+use App\Models\PosCommand;
 use App\Models\Printer;
 use App\Models\PrintJob;
 use App\Models\Product;
@@ -175,6 +177,101 @@ class PosApiWorkflowTest extends TestCase
         $this->assertNotNull($response->json('data.server_time'));
         $this->assertSame(2, $order->items()->firstOrFail()->quantity);
         $this->assertSame(1, $order->printJobs()->where('print_type', PrintType::Kitchen->value)->count());
+    }
+
+    public function test_reconcile_returns_stored_results_for_completed_and_failed_commands(): void
+    {
+        $table = $this->availableTable();
+        $completedId = (string) Str::uuid();
+        $this->api()->postJson(route('api.pos.commands.store'), [
+            'id' => $completedId,
+            'device_id' => $this->deviceId,
+            'type' => 'open_table',
+            'payload' => ['table_id' => $table->id],
+        ])->assertOk()->assertJsonPath('data.status', PosCommandStatus::Completed->value);
+
+        // Lệnh failed thật: checkout một đơn không tồn tại trong store.
+        $failedId = (string) Str::uuid();
+        $this->api()->postJson(route('api.pos.commands.store'), [
+            'id' => $failedId,
+            'device_id' => $this->deviceId,
+            'type' => 'checkout',
+            'payload' => [
+                'order_id' => 999_999,
+                'request_id' => (string) Str::uuid(),
+                'payment_method' => 'cash',
+            ],
+        ])->assertUnprocessable()->assertJsonPath('data.status', PosCommandStatus::Failed->value);
+
+        $unknownId = (string) Str::uuid();
+        $response = $this->api()->postJson(route('api.pos.reconcile'), [
+            'device_id' => $this->deviceId,
+            'command_ids' => [$completedId, $failedId, $unknownId],
+        ])->assertOk()
+            ->assertJsonCount(2, 'data.commands')
+            ->assertJsonCount(1, 'data.changed_tables')
+            ->assertJsonPath('data.changed_tables.0.id', $table->id);
+
+        $byId = collect($response->json('data.commands'))->keyBy('id');
+        $this->assertSame(PosCommandStatus::Completed->value, $byId[$completedId]['status']);
+        $this->assertSame($table->id, $byId[$completedId]['result']['table_id']);
+        $this->assertSame(PosCommandStatus::Failed->value, $byId[$failedId]['status']);
+        $this->assertNotEmpty($byId[$failedId]['error']);
+        // UUID chưa từng tới server phải vắng mặt để client biết mà gửi lại đúng UUID cũ.
+        $this->assertArrayNotHasKey($unknownId, $byId->all());
+        $this->assertNotNull($response->json('data.server_time'));
+    }
+
+    public function test_reconcile_hides_commands_from_another_store_or_device(): void
+    {
+        $foreignStore = Store::query()->where('id', '!=', $this->store->id)->firstOrFail();
+        $foreignCommand = PosCommand::create([
+            'id' => (string) Str::uuid(),
+            'store_id' => $foreignStore->id,
+            'device_id' => $this->deviceId,
+            'user_id' => null,
+            'type' => PosCommandType::OpenTable,
+            'payload_hash' => hash('sha256', 'foreign-store'),
+            'status' => PosCommandStatus::Completed,
+            'attempts' => 1,
+            'processed_at' => now(),
+        ]);
+        $otherDeviceCommand = PosCommand::create([
+            'id' => (string) Str::uuid(),
+            'store_id' => $this->store->id,
+            'device_id' => (string) Str::uuid(),
+            'user_id' => null,
+            'type' => PosCommandType::OpenTable,
+            'payload_hash' => hash('sha256', 'other-device'),
+            'status' => PosCommandStatus::Completed,
+            'attempts' => 1,
+            'processed_at' => now(),
+        ]);
+
+        $this->api()->postJson(route('api.pos.reconcile'), [
+            'device_id' => $this->deviceId,
+            'command_ids' => [$foreignCommand->id, $otherDeviceCommand->id],
+        ])->assertOk()
+            ->assertJsonCount(0, 'data.commands')
+            ->assertJsonCount(0, 'data.changed_tables');
+    }
+
+    public function test_reconcile_requires_matching_device_id_and_valid_uuids(): void
+    {
+        $this->api()->postJson(route('api.pos.reconcile'), [
+            'device_id' => (string) Str::uuid(),
+            'command_ids' => [(string) Str::uuid()],
+        ])->assertUnprocessable()->assertJsonValidationErrors('device_id');
+
+        $this->api()->postJson(route('api.pos.reconcile'), [
+            'device_id' => $this->deviceId,
+            'command_ids' => ['not-a-uuid'],
+        ])->assertUnprocessable()->assertJsonValidationErrors('command_ids.0');
+
+        $this->api()->postJson(route('api.pos.reconcile'), [
+            'device_id' => $this->deviceId,
+            'command_ids' => array_map(fn (): string => (string) Str::uuid(), array_fill(0, 201, null)),
+        ])->assertUnprocessable()->assertJsonValidationErrors('command_ids');
     }
 
     public function test_android_can_claim_and_report_a_print_job_with_user_and_claim_tokens(): void

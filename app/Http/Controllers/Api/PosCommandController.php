@@ -8,6 +8,7 @@ use App\Enums\PosCommandType;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\PosCommandResource;
 use App\Models\DiningTable;
+use App\Models\PosCommand;
 use App\Models\Store;
 use App\Models\User;
 use App\Queries\Pos\TableMapReadModel;
@@ -83,6 +84,51 @@ final class PosCommandController extends Controller
                 'commands' => $commands,
                 // Sync chỉ trả các bàn liên quan đến batch; snapshot toàn store
                 // chỉ được dùng lúc khởi tạo, refresh thủ công hoặc đối soát.
+                'changed_tables' => $changedTableIds
+                    ->map(fn (int $tableId): ?array => $readModel->selectedTable($store, $tableId))
+                    ->filter()
+                    ->values()
+                    ->all(),
+                'server_time' => now()->toIso8601String(),
+            ],
+        ]);
+    }
+
+    /**
+     * Đối soát read-only: trả sự thật phía server cho các UUID thiết bị đang
+     * nghi ngờ (failed local, syncing kẹt). UUID vắng mặt nghĩa là command
+     * chưa từng tới server và client được phép gửi lại với đúng UUID đó.
+     */
+    public function reconcile(Request $request, TableMapReadModel $readModel): JsonResponse
+    {
+        [$user, $store, $deviceId] = $this->context($request);
+        $validated = $request->validate([
+            'device_id' => ['required', 'uuid', Rule::in([$deviceId])],
+            'command_ids' => ['present', 'array', 'max:200'],
+            'command_ids.*' => ['required', 'uuid'],
+        ]);
+        Gate::forUser($user)->authorize('viewAny', DiningTable::class);
+
+        $commands = PosCommand::query()
+            ->where('store_id', $store->getKey())
+            ->where('device_id', $deviceId)
+            ->whereIn('id', array_values(array_unique($validated['command_ids'])))
+            ->get();
+
+        // Chỉ lệnh completed mới làm bàn thay đổi; failed được rollback nên
+        // không cần patch projection. result.table_id có sẵn từ application layer.
+        $changedTableIds = $commands
+            ->filter(fn (PosCommand $command): bool => $command->status === PosCommandStatus::Completed)
+            ->map(fn (PosCommand $command): ?int => isset($command->result['table_id'])
+                ? (int) $command->result['table_id']
+                : null)
+            ->filter(fn (?int $tableId): bool => $tableId !== null && $tableId > 0)
+            ->unique()
+            ->values();
+
+        return response()->json([
+            'data' => [
+                'commands' => PosCommandResource::collection($commands)->resolve($request),
                 'changed_tables' => $changedTableIds
                     ->map(fn (int $tableId): ?array => $readModel->selectedTable($store, $tableId))
                     ->filter()
